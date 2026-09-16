@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
-:root { --bg: #f3e7dc; --surface: #f8efe5; --surface-2: #eadacc; --ink: #2c211b; --muted: #756256; --faint: #a58e7d; --line: #d7c5b5; --accent: #a9632f; --accent-strong: #8c4f28; --accent-soft: #e8d1bb; --warning: #9b6f3a; --danger: #a55d4e; --shadow: 0 22px 70px rgb(83 49 25 / 11%); }
+:root { --bg: #e7d8c9; --surface: #eee2d5; --surface-2: #ddcabc; --ink: #2c211b; --muted: #756256; --faint: #9b8371; --line: #cdb8a5; --accent: #965a35; --accent-strong: #7d472b; --accent-soft: #d9bfa8; --warning: #89633f; --danger: #995849; --shadow: 0 22px 70px rgb(83 49 25 / 15%); }
 .dark { --bg: #0e0e0c; --surface: #151512; --surface-2: #211c16; --ink: #eee5d6; --muted: #b4a591; --faint: #766956; --line: #393025; --accent: #b7791f; --accent-strong: #d09a4a; --accent-soft: #332719; --warning: #c18b4c; --danger: #c67661; --shadow: 0 24px 90px rgb(0 0 0 / 34%); }
 * { box-sizing: border-box; }
 html { background: var(--bg); scroll-behavior: smooth; }
@@ -181,3 +181,7 @@ body { background: var(--bg); background-image: radial-gradient(circle at 80% 8%
 .forecast-orb { min-width: 0; }.forecast-orb .observatory-field { height: 150px; }.forecast-orb .field-core { width: 42px; height: 42px; }.forecast-orb .field-core span { font-size: 13px; }.forecast-orb .field-node .node-value { display: none; }.forecast-orb .observatory-corner, .forecast-orb .field-readout { font-size: 7px; }.forecast-orb .corner-br, .forecast-orb .readout-bottom { display: none; }
 @media (max-width: 1100px) { .forecast-hero { grid-template-columns: .8fr 1.2fr .6fr; }.forecast-orb { grid-column: 1 / -1; }.forecast-orb .observatory-field { height: 170px; } }
 @media (max-width: 560px) { .forecast-hero { grid-template-columns: 1fr; gap: 22px; }.forecast-meta { border-left: 0; border-top: 1px solid var(--line); padding: 20px 0 0; grid-template-columns: repeat(3, 1fr); display: grid; }.forecast-orb { grid-column: auto; }.forecast-orb .observatory-field { height: 180px; } }
+
+.observatory-field canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; z-index: 2; }
+.observatory-field .observatory-corner, .observatory-field .field-readout { pointer-events: none; }
+@media (max-width: 560px) { .observatory-field canvas { image-rendering: auto; } }

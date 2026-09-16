@@ -1,45 +1,132 @@
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 
-const nodes = [
-  { x: 18, y: 35, z: 1, value: "0.18" },
-  { x: 32, y: 64, z: 2, value: "0.42" },
-  { x: 48, y: 24, z: 3, value: "0.70" },
-  { x: 67, y: 52, z: 2, value: "0.55" },
-  { x: 78, y: 28, z: 1, value: "0.31" },
-  { x: 84, y: 72, z: 3, value: "0.83" },
-];
+type Point3 = { x: number; y: number; z: number; phase: number; value?: string };
+
+const seed = (count: number): Point3[] => Array.from({ length: count }, (_, index) => {
+  const theta = (index * 2.399963) % (Math.PI * 2);
+  const y = 1 - (index / (count - 1)) * 2;
+  const radius = Math.sqrt(Math.max(0, 1 - y * y));
+  return { x: Math.cos(theta) * radius, y, z: Math.sin(theta) * radius, phase: (index * 1.73) % (Math.PI * 2) };
+});
+
+const particles = seed(112);
+const labels = ["0.18", "0.42", "0.70", "0.55", "0.31", "0.83"];
 
 export default function ObservatoryField({ compact = false }: { compact?: boolean }) {
-  const [pointer, setPointer] = useState({ x: 0, y: 0 });
-  return (
-    <div
-      className={`observatory-field ${compact ? "is-compact" : ""}`}
-      style={{ "--pointer-x": `${pointer.x}deg`, "--pointer-y": `${pointer.y}deg` } as React.CSSProperties}
-      onPointerMove={event => {
-        const rect = event.currentTarget.getBoundingClientRect();
-        setPointer({ x: ((event.clientX - rect.left) / rect.width - 0.5) * 10, y: ((event.clientY - rect.top) / rect.height - 0.5) * -8 });
-      }}
-      onPointerLeave={() => setPointer({ x: 0, y: 0 })}
-      aria-label="Interactive probability field"
-      role="img"
-    >
-      <div className="observatory-scanline" />
-      <div className="observatory-corner corner-tl">FIELD / 01</div>
-      <div className="observatory-corner corner-br">x 04.21 · y 08.70</div>
-      <div className="field-depth-plane plane-back" />
-      <div className="field-depth-plane plane-front" />
-      <div className="field-orbit orbit-one" />
-      <div className="field-orbit orbit-two" />
-      <div className="field-orbit orbit-three" />
-      <div className="field-core"><span>?</span></div>
-      <div className="field-core-glow" />
-      <svg className="field-connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M18 35 C31 45 30 63 48 24 C63 34 67 52 78 28 C75 58 84 72 67 52 C54 73 32 64 18 35" />
-        <path d="M48 24 C48 47 55 60 67 52" />
-      </svg>
-      {nodes.map((node, index) => <div key={node.value} className={`field-node node-${index + 1}`} style={{ left: `${node.x}%`, top: `${node.y}%`, zIndex: node.z }}><span className="node-dot" /><span className="node-value">{node.value}</span></div>)}
-      <div className="field-readout readout-top"><span>probability field</span><strong>LIVE SIMULATION</strong></div>
-      <div className="field-readout readout-bottom"><span>uncertainty</span><strong>σ 0.24</strong></div>
-    </div>
-  );
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fieldRef = useRef<HTMLDivElement>(null);
+  const pointer = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const field = fieldRef.current;
+    if (!canvas || !field) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    let frame = 0;
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    const resize = () => {
+      const rect = field.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      width = rect.width;
+      height = rect.height;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    const project = (point: Point3, rotation: number, tilt: number, scale: number) => {
+      const cos = Math.cos(rotation);
+      const sin = Math.sin(rotation);
+      const rx = point.x * cos - point.z * sin;
+      const rz = point.x * sin + point.z * cos;
+      const ry = point.y * Math.cos(tilt) - rz * Math.sin(tilt);
+      const depth = rz * Math.cos(tilt) + point.y * Math.sin(tilt);
+      const perspective = 1 / (1.55 - depth * 0.58);
+      return { x: width * .51 + rx * scale * perspective, y: height * .5 + ry * scale * perspective, depth, perspective };
+    };
+    const draw = (time: number) => {
+      const isDark = document.documentElement.classList.contains("dark");
+      const accent = isDark ? "#d09a4a" : "#9a5d36";
+      const muted = isDark ? "#766956" : "#a8927d";
+      const line = isDark ? "rgba(118,105,86,.25)" : "rgba(130,103,81,.18)";
+      const bg = isDark ? "#151512" : "#e8dccf";
+      const progress = Number(getComputedStyle(document.documentElement).getPropertyValue("--scroll-progress")) || 0;
+      pointer.current.x += (pointer.current.targetX - pointer.current.x) * .06;
+      pointer.current.y += (pointer.current.targetY - pointer.current.y) * .06;
+      const rotation = (reducedMotion.matches ? .35 : time * .00016) + pointer.current.x * .35 + progress * .8;
+      const tilt = pointer.current.y * .2 + Math.sin(time * .00035) * .06;
+      const scale = Math.min(width, height) * (compact ? .34 : .42);
+      context.clearRect(0, 0, width, height);
+      context.fillStyle = bg;
+      context.fillRect(0, 0, width, height);
+
+      context.save();
+      context.globalAlpha = .4;
+      context.strokeStyle = line;
+      context.lineWidth = 1;
+      for (let i = -5; i <= 5; i++) {
+        const y = height * .72 + i * 18 + progress * 16;
+        context.beginPath(); context.moveTo(0, y); context.lineTo(width, y - 18); context.stroke();
+        const x = width * .5 + i * 32;
+        context.beginPath(); context.moveTo(width * .5, height * .52); context.lineTo(x, height); context.stroke();
+      }
+      context.restore();
+
+      const projected = particles.map((point, index) => ({ ...project(point, rotation + Math.sin(time * .0002 + point.phase) * .08, tilt, scale), index }));
+      context.save();
+      context.globalAlpha = .23;
+      context.strokeStyle = accent;
+      context.lineWidth = 1;
+      for (let i = 0; i < projected.length; i += 1) {
+        const point = projected[i];
+        const nearby = projected.filter((candidate, j) => j > i && Math.hypot(candidate.x - point.x, candidate.y - point.y) < scale * .25).slice(0, 2);
+        nearby.forEach(candidate => { context.beginPath(); context.moveTo(point.x, point.y); context.lineTo(candidate.x, candidate.y); context.stroke(); });
+      }
+      context.restore();
+
+      projected.sort((a, b) => a.depth - b.depth).forEach((point, index) => {
+        const radius = Math.max(1.1, 3.2 * point.perspective);
+        context.beginPath(); context.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        context.fillStyle = `rgba(208,154,74,${.2 + point.perspective * .25})`;
+        context.fill();
+        if (index % 17 === 0 && point.depth > .1) { context.beginPath(); context.arc(point.x, point.y, radius * 2.8, 0, Math.PI * 2); context.strokeStyle = `rgba(208,154,74,${.2 * point.perspective})`; context.stroke(); }
+      });
+
+      const coreX = width * .51;
+      const coreY = height * .5;
+      const glow = context.createRadialGradient(coreX, coreY, 3, coreX, coreY, scale * .3);
+      glow.addColorStop(0, `${accent}66`); glow.addColorStop(1, `${accent}00`);
+      context.fillStyle = glow; context.beginPath(); context.arc(coreX, coreY, scale * .3, 0, Math.PI * 2); context.fill();
+      context.beginPath(); context.arc(coreX, coreY, compact ? 20 : 31, 0, Math.PI * 2); context.fillStyle = isDark ? "#211c16" : "#e8dccf"; context.fill(); context.strokeStyle = accent; context.lineWidth = 1.2; context.stroke();
+      context.fillStyle = accent; context.font = `${compact ? 12 : 18}px IBM Plex Mono, monospace`; context.textAlign = "center"; context.fillText("?", coreX, coreY + (compact ? 4 : 6));
+
+      const visibleLabels = compact ? labels.filter((_, index) => index % 2 === 0) : labels;
+      visibleLabels.forEach((label, index) => {
+        const anchor = projected[(index * 19 + 9) % projected.length];
+        if (!anchor || anchor.depth < -.25) return;
+        context.fillStyle = isDark ? "#d09a4a" : "#8c4f28";
+        context.strokeStyle = `${accent}99`;
+        context.font = `${compact ? 8 : 10}px IBM Plex Mono, monospace`;
+        context.strokeRect(anchor.x + 5, anchor.y - 9, compact ? 28 : 37, compact ? 14 : 17);
+        context.fillText(label, anchor.x + (compact ? 19 : 24), anchor.y + 2);
+      });
+      context.fillStyle = muted; context.font = "9px IBM Plex Mono, monospace"; context.textAlign = "right"; context.fillText(`DEPTH ${(1 - progress).toFixed(2)}`, width - 20, height - 44);
+      if (!reducedMotion.matches) frame = window.requestAnimationFrame(draw);
+    };
+    const onPointer = (event: PointerEvent) => { const rect = field.getBoundingClientRect(); pointer.current.targetX = ((event.clientX - rect.left) / rect.width - .5) * 2; pointer.current.targetY = ((event.clientY - rect.top) / rect.height - .5) * 2; };
+    const resetPointer = () => { pointer.current.targetX = 0; pointer.current.targetY = 0; };
+    resize(); draw(performance.now());
+    const observer = new ResizeObserver(resize);
+    observer.observe(field);
+    field.addEventListener("pointermove", onPointer); field.addEventListener("pointerleave", resetPointer);
+    return () => { if (frame) window.cancelAnimationFrame(frame); observer.disconnect(); field.removeEventListener("pointermove", onPointer); field.removeEventListener("pointerleave", resetPointer); };
+  }, [compact]);
+
+  return <div ref={fieldRef} className={`observatory-field ${compact ? "is-compact" : ""}`} aria-label="Animated 3D probability field" role="img"><canvas ref={canvasRef} /><div className="observatory-corner corner-tl">FIELD / 01</div><div className="observatory-corner corner-br">x 04.21 · y 08.70</div><div className="field-readout readout-top"><span>probability field</span><strong>LIVE SIMULATION</strong></div><div className="field-readout readout-bottom"><span>uncertainty</span><strong>σ 0.24</strong></div></div>;
 }
