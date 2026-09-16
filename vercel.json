@@ -1,0 +1,8 @@
+{
+  "buildCommand": "pnpm build:vercel",
+  "outputDirectory": "dist/public",
+  "framework": null,
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}
