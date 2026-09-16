@@ -223,6 +223,15 @@ const assertApiKey = () => {
   }
 };
 
+async function parseJsonResponse<T>(response: Response, operation: string): Promise<T> {
+  const body = await response.text();
+  try {
+    return JSON.parse(body) as T;
+  } catch {
+    throw new Error(`${operation} returned a non-JSON response (${response.status}). Verify BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY in Vercel.`);
+  }
+}
+
 const normalizeResponseFormat = ({
   responseFormat,
   response_format,
@@ -417,7 +426,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     );
   }
 
-  return (await response.json()) as InvokeResult;
+  return parseJsonResponse<InvokeResult>(response, "LLM provider");
 }
 
 export type ModelInfo = {
@@ -450,5 +459,5 @@ export async function listLLMModels(): Promise<ModelsResponse> {
     );
   }
 
-  return (await response.json()) as ModelsResponse;
+  return parseJsonResponse<ModelsResponse>(response, "LLM models provider");
 }

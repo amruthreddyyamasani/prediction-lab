@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { labelForProbability, normalizeProbability } from "./forecast";
+import { labelForProbability, normalizeProbability, parseForecastContent } from "./forecast";
 
 describe("forecast probability contract", () => {
   it("rounds to meaningful five-point increments and clamps extremes", () => {
@@ -12,5 +12,13 @@ describe("forecast probability contract", () => {
     expect(labelForProbability(0.8)).toBe("likely");
     expect(labelForProbability(0.5)).toBe("uncertain");
     expect(labelForProbability(0.2)).toBe("unlikely");
+  });
+
+  it("accepts a model response wrapped in a markdown JSON fence", () => {
+    expect(parseForecastContent('```json\n{"probability":0.7}\n```').probability).toBe(0.7);
+  });
+
+  it("returns a deployment-safe error for non-JSON model content", () => {
+    expect(() => parseForecastContent("The forecast is probably yes.")).toThrow("invalid structured response");
   });
 });

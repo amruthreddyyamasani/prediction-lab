@@ -20,6 +20,18 @@ export function labelForProbability(value: number): ForecastLabel {
   return "uncertain";
 }
 
+export function parseForecastContent(content: string): ForecastGeneration {
+  const normalized = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+  const start = normalized.indexOf("{");
+  const end = normalized.lastIndexOf("}");
+  const candidate = start >= 0 && end > start ? normalized.slice(start, end + 1) : normalized;
+  try {
+    return JSON.parse(candidate) as ForecastGeneration;
+  } catch {
+    throw new Error("Forecast service returned an invalid structured response. Check the Vercel LLM environment variables and deployment logs.");
+  }
+}
+
 export async function generateForecast(question: string, categorySlug?: string): Promise<ForecastGeneration> {
   const today = new Date().toISOString().slice(0, 10);
   const response = await invokeLLM({
@@ -31,8 +43,9 @@ export async function generateForecast(question: string, categorySlug?: string):
     reasoning: { effort: "low" },
   });
   const content = response.choices?.[0]?.message?.content;
-  if (typeof content !== "string") throw new Error("The forecasting model returned no structured result.");
-  const parsed = JSON.parse(content) as ForecastGeneration;
+  const textContent = typeof content === "string" ? content : Array.isArray(content) ? content.filter(part => part.type === "text").map(part => part.text).join("\n") : "";
+  if (!textContent) throw new Error("The forecasting model returned no structured result.");
+  const parsed = parseForecastContent(textContent);
   const probability = normalizeProbability(parsed.probability);
   return { ...parsed, probability, label: labelForProbability(probability) };
 }

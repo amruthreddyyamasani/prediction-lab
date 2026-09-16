@@ -2,7 +2,14 @@
   "buildCommand": "pnpm build:vercel",
   "outputDirectory": "dist/public",
   "framework": null,
-  "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  "functions": {
+    "api/[...path].ts": {
+      "runtime": "nodejs22.x"
+    }
+  },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/[...path].ts" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
