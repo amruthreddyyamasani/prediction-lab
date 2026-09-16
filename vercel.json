@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm build:vercel",
+  "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist/public",
   "framework": null,
   "routes": [

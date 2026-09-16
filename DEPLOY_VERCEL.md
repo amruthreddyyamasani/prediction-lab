@@ -4,7 +4,7 @@ Prediction Lab uses Vercel for the React static output and a Node serverless fun
 
 ## 1. Import the repository
 
-Create a new Vercel project from the GitHub repository and keep the repository root as the project root. Vercel reads `vercel.json`, runs `pnpm build:vercel`, serves `dist/public`, and routes `/api/*` to the catch-all function at `api/[...path].ts`.
+Create a new Vercel project from the GitHub repository and keep the repository root as the project root. Vercel reads `vercel.json`, runs `npm run build:vercel`, serves `dist/public`, and routes `/api/*` to the catch-all function at `api/[...path].ts`.
 
 ## 2. Add environment variables
 
@@ -32,8 +32,8 @@ Push to the repository's default branch or deploy from the Vercel dashboard. Aft
 ## Local production check
 
 ```bash
-pnpm install
-pnpm check
-pnpm test
-pnpm build:vercel
+npm install
+npm run check
+npm test
+npm run build:vercel
 ```

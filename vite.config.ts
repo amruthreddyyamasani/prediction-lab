@@ -1,10 +1,8 @@
-import { jsxLocPlugin } from "@builder.io/vite-plugin-jsx-loc";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
-import { defineConfig, type Plugin, type ViteDevServer } from "vite";
-import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
+import { defineConfig, type HtmlTagDescriptor, type Plugin, type ViteDevServer } from "vite";
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -79,21 +77,34 @@ function vitePluginManusDebugCollector(): Plugin {
     name: "manus-debug-collector",
 
     transformIndexHtml(html) {
-      if (process.env.NODE_ENV === "production") {
-        return html;
+      const tags: HtmlTagDescriptor[] = [];
+      if (process.env.NODE_ENV !== "production") {
+        tags.push({
+          tag: "script",
+          attrs: {
+            src: "/__manus__/debug-collector.js",
+            defer: true,
+          },
+          injectTo: "head",
+        });
       }
+      const analyticsEndpoint = process.env.VITE_ANALYTICS_ENDPOINT;
+      const analyticsWebsiteId = process.env.VITE_ANALYTICS_WEBSITE_ID;
+      if (analyticsEndpoint && analyticsWebsiteId) {
+        tags.push({
+          tag: "script",
+          attrs: {
+            src: `${analyticsEndpoint}/umami`,
+            "data-website-id": analyticsWebsiteId,
+            defer: true,
+          },
+          injectTo: "body",
+        });
+      }
+      if (tags.length === 0) return html;
       return {
         html,
-        tags: [
-          {
-            tag: "script",
-            attrs: {
-              src: "/__manus__/debug-collector.js",
-              defer: true,
-            },
-            injectTo: "head",
-          },
-        ],
+        tags,
       };
     },
 
@@ -150,7 +161,7 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+const plugins = [react(), tailwindcss(), vitePluginManusDebugCollector()];
 
 export default defineConfig({
   plugins,
