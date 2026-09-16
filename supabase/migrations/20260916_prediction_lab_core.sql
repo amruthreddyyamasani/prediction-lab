@@ -44,3 +44,10 @@ create policy evidence_owner_all on public.evidence for all using (exists (selec
 drop policy if exists resolutions_owner_all on public.resolutions;
 create policy resolutions_owner_all on public.resolutions for all using (exists (select 1 from public.predictions p where p.id = prediction_id and p.owner_id = auth.uid())) with check (exists (select 1 from public.predictions p where p.id = prediction_id and p.owner_id = auth.uid()));
 revoke execute on function public.handle_new_user() from public;
+
+grant select on table public.categories to authenticated;
+grant select, insert, update, delete on table public.profiles to authenticated;
+grant select, insert, update, delete on table public.predictions to authenticated;
+grant select, insert, update, delete on table public.forecast_versions to authenticated;
+grant select, insert, update, delete on table public.evidence to authenticated;
+grant select, insert, update, delete on table public.resolutions to authenticated;
