@@ -3,7 +3,7 @@ import * as THREE from "three";
 
 type SatelliteStat = { label: string; value: string; detail: string };
 
-const satelliteStats: SatelliteStat[] = [
+export const satelliteStats: SatelliteStat[] = [
   { label: "Active forecasts", value: "04", detail: "Questions currently moving through the lab." },
   { label: "Resolution horizon", value: "2030", detail: "The farthest active resolution date." },
   { label: "Evidence state", value: "OPEN", detail: "Research can change the current probability." },
