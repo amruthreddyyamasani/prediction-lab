@@ -194,3 +194,9 @@ body { background: var(--bg); background-image: radial-gradient(circle at 80% 8%
 .top-bar { z-index: 15; }
 @media (max-width: 700px) { .scroll-world { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) { .scroll-world { opacity: .22; } }
+
+.world-hint { position: fixed; right: 26px; bottom: 24px; color: var(--faint); font: 9px 'IBM Plex Mono', monospace; letter-spacing: .08em; text-transform: uppercase; opacity: .72; pointer-events: none; }
+.satellite-tooltip { position: fixed; z-index: 30; width: 214px; padding: 14px 15px; border: 1px solid color-mix(in srgb, var(--accent) 62%, var(--line)); background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--ink); box-shadow: 0 16px 45px rgb(0 0 0 / 25%), 0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent); backdrop-filter: blur(14px); pointer-events: none; animation: tooltip-in .2s cubic-bezier(.23,1,.32,1) both; }
+.satellite-tooltip::before { content: ''; position: absolute; left: -4px; bottom: -4px; width: 7px; height: 7px; background: var(--accent); transform: rotate(45deg); }.tooltip-kicker { color: var(--accent-strong); font: 8px 'IBM Plex Mono', monospace; letter-spacing: .08em; text-transform: uppercase; }.satellite-tooltip strong { display: block; margin-top: 8px; font: 25px 'IBM Plex Mono', monospace; letter-spacing: -.08em; }.satellite-tooltip > span { display: block; margin-top: 2px; font-size: 12px; font-weight: 600; }.satellite-tooltip p { margin: 8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+@keyframes tooltip-in { from { opacity: 0; transform: translateY(6px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 560px) { .world-hint { right: 15px; bottom: 15px; font-size: 8px; }.satellite-tooltip { width: 185px; } }
