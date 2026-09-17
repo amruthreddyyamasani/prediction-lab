@@ -4,6 +4,7 @@ import { Activity, BarChart3, BookOpen, ChevronRight, Compass, FlaskConical, Log
 import { useTheme } from "@/contexts/ThemeContext";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import AuthDialog from "./AuthDialog";
+import ScrollWorld from "./ScrollWorld";
 
 const nav = [
   { href: "/", label: "Ask the future", short: "ASK", icon: FlaskConical },
@@ -44,6 +45,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-frame">
+      <ScrollWorld />
       <div className="scroll-progress" aria-hidden="true"><span /></div>
       <aside className={`side-rail ${mobileOpen ? "is-open" : ""}`}>
         <div className="rail-brand"><div className="brand-mark"><span></span><span></span><span></span></div><div><div className="brand-name">Prediction Lab</div><div className="brand-sub">forecasting instrument</div></div><button className="mobile-close" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X size={18} /></button></div>
