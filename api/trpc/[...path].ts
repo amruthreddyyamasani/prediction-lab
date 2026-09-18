@@ -3,6 +3,12 @@ import { appRouter } from "../../server/routers.js";
 import { createContext } from "../../server/_core/context.js";
 
 export default function handler(req: any, res: any) {
+  const path = Array.isArray(req.query?.path) ? req.query.path.join("/") : req.query?.path;
+  if (path) {
+    const query = typeof req.url === "string" && req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
+    req.url = `/api/trpc/${path}${query}`;
+  }
+
   return nodeHTTPRequestHandler({
     endpoint: "/api/trpc",
     req,
