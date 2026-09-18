@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
-import { systemRouter } from "./_core/systemRouter";
-import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { createPrediction, getAnalytics, getCategories, getPrediction, listPredictions, resolvePrediction, updateForecast } from "./db";
-import { generateForecast } from "./forecast";
+import { COOKIE_NAME } from "../shared/const.js";
+import { getSessionCookieOptions } from "./_core/cookies.js";
+import { systemRouter } from "./_core/systemRouter.js";
+import { protectedProcedure, publicProcedure, router } from "./_core/trpc.js";
+import { createPrediction, getAnalytics, getCategories, getPrediction, listPredictions, resolvePrediction, updateForecast } from "./db.js";
+import { generateForecast } from "./forecast.js";
 import { TRPCError } from "@trpc/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 

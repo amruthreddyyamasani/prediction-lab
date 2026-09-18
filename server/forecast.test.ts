@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { labelForProbability, normalizeProbability, parseForecastContent } from "./forecast";
+import { labelForProbability, normalizeProbability, parseForecastContent } from "./forecast.js";
 
 describe("forecast probability contract", () => {
   it("rounds to meaningful five-point increments and clamps extremes", () => {

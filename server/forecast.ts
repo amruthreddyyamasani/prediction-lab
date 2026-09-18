@@ -1,5 +1,5 @@
-import { invokeLLM } from "./_core/llm";
-import type { ForecastGeneration, ForecastLabel } from "@shared/types";
+import { invokeLLM } from "./_core/llm.js";
+import type { ForecastGeneration, ForecastLabel } from "../shared/types.js";
 
 const forecastSchema = {
   type: "object",

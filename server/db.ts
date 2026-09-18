@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Analytics, AppUser, ForecastGeneration, ForecastRecord } from "@shared/types";
-import type { InsertUser, User } from "../drizzle/schema";
+import type { Analytics, AppUser, ForecastGeneration, ForecastRecord } from "../shared/types.js";
+import type { InsertUser, User } from "../drizzle/schema.js";
 
 /** Legacy Manus auth helpers are intentionally unused; Supabase Auth is the source of truth. */
 export async function getUserByOpenId(_openId: string): Promise<User | undefined> {
