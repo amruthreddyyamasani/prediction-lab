@@ -1,8 +1,14 @@
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import { nodeHTTPRequestHandler } from "@trpc/server/adapters/node-http";
 import { appRouter } from "../../server/routers";
 import { createContext } from "../../server/_core/context";
 
-export default createExpressMiddleware({
-  router: appRouter,
-  createContext,
-});
+export default function handler(req: any, res: any) {
+  return nodeHTTPRequestHandler({
+    endpoint: "/api/trpc",
+    req,
+    res,
+    router: appRouter,
+    createContext: ({ req: contextReq, res: contextRes }) =>
+      createContext({ req: contextReq as never, res: contextRes as never }),
+  });
+}
