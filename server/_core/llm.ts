@@ -220,14 +220,83 @@ const resolveApiUrl = () =>
       : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey && !ENV.openAiApiKey) {
+  if (!ENV.forgeApiKey && !ENV.openAiApiKey && !ENV.geminiApiKey) {
     throw new Error(
-      "AI provider is not configured. Set OPENAI_API_KEY or BUILT_IN_FORGE_API_KEY in Vercel production environment variables."
+      "AI provider is not configured. Set GEMINI_API_KEY, OPENAI_API_KEY, or BUILT_IN_FORGE_API_KEY in Vercel production environment variables."
     );
   }
 };
 
 const resolveApiKey = () => ENV.forgeApiKey || ENV.openAiApiKey;
+
+const isGeminiConfigured = () => Boolean(ENV.geminiApiKey);
+
+function toGeminiSchema(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(toGeminiSchema);
+  if (!value || typeof value !== "object") return value;
+  const source = value as Record<string, unknown>;
+  const result: Record<string, unknown> = {};
+  for (const key of ["type", "description", "enum", "required", "properties", "items", "nullable"]) {
+    if (source[key] !== undefined) result[key] = toGeminiSchema(source[key]);
+  }
+  if (typeof result.type === "string") result.type = result.type.toUpperCase();
+  return result;
+}
+
+function messageText(content: MessageContent | MessageContent[]): string {
+  return ensureArray(content)
+    .filter((part): part is string | TextContent => typeof part === "string" || part.type === "text")
+    .map(part => typeof part === "string" ? part : part.text)
+    .join("\n");
+}
+
+async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
+  const model = params.model || "gemini-2.5-flash";
+  const systemMessages = params.messages.filter(message => message.role === "system");
+  const contents = params.messages
+    .filter(message => message.role !== "system")
+    .map(message => ({
+      role: message.role === "assistant" ? "model" : "user",
+      parts: [{ text: messageText(message.content) }],
+    }));
+  const normalized = normalizeResponseFormat({
+    responseFormat: params.responseFormat,
+    response_format: params.response_format,
+    outputSchema: params.outputSchema,
+    output_schema: params.output_schema,
+  });
+  const generationConfig: Record<string, unknown> = {};
+  const resolvedMaxTokens = params.max_tokens ?? params.maxTokens;
+  if (typeof resolvedMaxTokens === "number") generationConfig.maxOutputTokens = resolvedMaxTokens;
+  if (normalized?.type === "json_schema") {
+    generationConfig.responseMimeType = "application/json";
+    generationConfig.responseSchema = toGeminiSchema(normalized.json_schema.schema);
+  } else if (normalized?.type === "json_object") {
+    generationConfig.responseMimeType = "application/json";
+  }
+  const body: Record<string, unknown> = { contents, generationConfig };
+  if (systemMessages.length) {
+    body.systemInstruction = { parts: [{ text: systemMessages.map(message => messageText(message.content)).join("\n") }] };
+  }
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(ENV.geminiApiKey)}`;
+  const response = await fetchWithBackoff(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
+  }
+  const result = await parseJsonResponse<{ candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }>(response, "Gemini provider");
+  const content = result.candidates?.[0]?.content?.parts?.map(part => part.text ?? "").join("\n") ?? "";
+  return {
+    id: `gemini-${Date.now()}`,
+    created: Math.floor(Date.now() / 1000),
+    model,
+    choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }],
+  };
+}
 
 async function parseJsonResponse<T>(response: Response, operation: string): Promise<T> {
   const body = await response.text();
@@ -356,6 +425,8 @@ const fetchWithBackoff = async (
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
+
+  if (isGeminiConfigured()) return invokeGemini(params);
 
   const {
     messages,
