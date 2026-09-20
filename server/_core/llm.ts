@@ -237,7 +237,14 @@ function toGeminiSchema(value: unknown): unknown {
   const source = value as Record<string, unknown>;
   const result: Record<string, unknown> = {};
   for (const key of ["type", "description", "enum", "required", "properties", "items", "nullable"]) {
-    if (source[key] !== undefined) result[key] = toGeminiSchema(source[key]);
+    if (source[key] === undefined) continue;
+    if (key === "properties" && typeof source[key] === "object" && !Array.isArray(source[key])) {
+      result[key] = Object.fromEntries(
+        Object.entries(source[key] as Record<string, unknown>).map(([property, schema]) => [property, toGeminiSchema(schema)])
+      );
+    } else {
+      result[key] = toGeminiSchema(source[key]);
+    }
   }
   if (typeof result.type === "string") result.type = result.type.toUpperCase();
   return result;
