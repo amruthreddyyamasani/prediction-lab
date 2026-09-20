@@ -35,7 +35,7 @@ export function parseForecastContent(content: string): ForecastGeneration {
 export async function generateForecast(question: string, categorySlug?: string): Promise<ForecastGeneration> {
   const today = new Date().toISOString().slice(0, 10);
   const response = await invokeLLM({
-    model: "gemini-2.5-flash",
+    model: "gemini-3.6-flash",
     messages: [
       { role: "system", content: `You are the forecasting analyst inside Prediction Lab. Produce a disciplined probabilistic forecast, not a confident answer. Today is ${today}. Do not invent sources, citations, or evidence. This request is the structured assessment stage; the product will display that external research is pending unless a source is actually available. Make the outcome testable: define a specific date and a yes/no resolution condition. Use probability in increments of 0.05 where possible, never use false precision, and label uncertainty separately from probability. Choose one of these category slugs: ai-technology, science, business, economy, geopolitics, climate, health, space, society. If the question is vague, normalize it into a measurable version while preserving intent.` },
       { role: "user", content: `Forecast this question: ${question}${categorySlug ? `\nPreferred category: ${categorySlug}` : ""}` },
