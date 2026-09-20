@@ -40,7 +40,7 @@ export default function Home() {
       return;
     }
     if (!forecastable) return;
-    generate.mutate({ question, categorySlug: category || undefined });
+    generate.mutate({ question: question.trim(), categorySlug: category || undefined });
   }
 
   return <div className="home-page observatory-page">
@@ -64,7 +64,7 @@ export default function Home() {
         <div className="question-top"><span className="instrument-label">Forecast question</span><span className="instrument-count mono">{question.length.toString().padStart(3, "0")} / 1000</span></div>
         <textarea value={question} onChange={event => setQuestion(event.target.value)} placeholder="Will AI agents replace more software development jobs by 2030?" rows={4} disabled={generate.isPending} aria-label="Forecast question" />
         <div className="console-divider"><span /> <span className="mono">DEFINE → RESOLVE</span> <span /></div>
-        <div className="instrument-bottom"><label className="category-select"><span>Optional lens</span><select value={category} onChange={event => setCategory(event.target.value)} disabled={!user || generate.isPending}><option value="">Auto-categorize</option>{(categories.data ?? []).map(item => <option key={item.slug} value={item.slug}>{item.name}</option>)}</select><ChevronDown size={15} /></label><button className="primary-button magnetic-button" disabled={generate.isPending || Boolean(user && !forecastable)}>{generate.isPending ? <><span className="button-pulse"></span> Reading the field…</> : <>{user ? "Generate forecast" : "Sign in to save"}<ArrowUpRight size={17} /></>}</button></div>{generate.error && <div className="inline-error"><Info size={15} /> {generate.error.message.includes("Supabase") ? "Your database session is unavailable. Sign in again and retry." : generate.error.message}</div>}
+        <div className="instrument-bottom"><label className="category-select"><span>Optional lens</span><select value={category} onChange={event => setCategory(event.target.value)} disabled={!user || generate.isPending}><option value="">Auto-categorize</option>{(categories.data ?? []).map(item => <option key={item.slug} value={item.slug}>{item.name}</option>)}</select><ChevronDown size={15} /></label><button type="submit" className="primary-button magnetic-button" disabled={generate.isPending || Boolean(user && !forecastable)} aria-busy={generate.isPending}>{generate.isPending ? <><span className="button-pulse"></span> Reading the field…</> : <>{user ? "Generate forecast" : "Sign in to save"}<ArrowUpRight size={17} /></>}</button></div>{user && !forecastable && <div className="console-hint">Enter at least 10 characters to activate the forecast.</div>}{generate.error && <div className="inline-error"><Info size={15} /> {generate.error.message.includes("Supabase") ? "Your database session is unavailable. Sign in again and retry." : generate.error.message}</div>}
       </form>
       <div className="sample-row"><span className="sample-label">Open a live question</span>{sampleQuestions.map((sample, index) => <button key={sample} className="sample-question" onClick={() => setQuestion(sample)}><span>0{index + 1}</span>{sample}</button>)}</div>
     </section>

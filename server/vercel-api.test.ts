@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import app from "../api/[...path].js";
+import app from "../api/trpc/[...path].js";
 
 describe("Vercel API adapter", () => {
   it("serves the existing tRPC health procedure as JSON", async () => {
