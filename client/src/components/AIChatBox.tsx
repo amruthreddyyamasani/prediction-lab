@@ -63,7 +63,7 @@ export type AIChatBoxProps = {
  * A ready-to-use AI chat box component that integrates with the LLM system.
  *
  * Features:
- * - Matches server-side Message interface for seamless integration
+ * - Matches the server-side Message interface
  * - Markdown rendering with Streamdown
  * - Auto-scrolls to latest message
  * - Loading states

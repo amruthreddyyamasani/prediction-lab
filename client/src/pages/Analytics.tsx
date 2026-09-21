@@ -11,16 +11,16 @@ export default function Analytics() {
   const { user } = useSupabaseAuth();
   const query = trpc.analytics.useQuery(undefined, { enabled: Boolean(user) });
   if (!user) {
-    return <div className="page-empty"><div className="empty-index">03 / calibration</div><h1>Measure the<br /><em>forecast.</em></h1><p>Calibration becomes meaningful only after your forecasts resolve. Sign in to keep a record.</p><Link className="primary-button" href="/">Make a forecast <ArrowUpRight size={17} /></Link></div>;
+    return <div className="page-empty"><div className="empty-index">03 / calibration</div><h1>Measure the<br /><em>forecast.</em></h1><p>Sign in to review calibration from your resolved forecasts.</p><Link className="primary-button" href="/">Make a forecast <ArrowUpRight size={17} /></Link></div>;
   }
   const data = query.data;
   return (
     <div className="internal-page analytics-page">
       <div className="page-heading">
-        <div><div className="eyebrow"><span className="eyebrow-line"></span> Performance, not vanity metrics</div><h1>Calibration desk</h1><p>When the lab says 70%, how often does the event actually happen? This page only renders metrics computed from resolved records.</p></div>
+        <div><div className="eyebrow"><span className="eyebrow-line"></span> Forecast performance</div><h1>Calibration desk</h1><p>Compare predicted probabilities with resolved outcomes. Metrics use your saved forecasts only.</p></div>
         <div className="data-honesty"><Info size={15} /> No resolved forecasts? No invented score.</div>
       </div>
-      {query.isLoading ? <div className="loading-list">Calculating from your ledger…</div> : (
+      {query.isLoading ? <div className="loading-list">Calculating from resolved forecasts…</div> : (
         <>
           <div className="metric-band">
             <div><span>Resolved forecasts</span><strong>{data?.resolvedCount ?? 0}</strong><small>events with a recorded outcome</small></div>
@@ -42,7 +42,7 @@ export default function Analytics() {
               </section>
             </div>
           ) : (
-            <div className="analytics-empty"><BarChart3 size={25} /><div><h2>The calibration desk is waiting.</h2><p>Resolve a forecast in the ledger and this space will calculate Brier score, directional accuracy, and reliability from the actual outcome.</p></div><Link href="/library" className="text-link">Open the ledger <ArrowUpRight size={15} /></Link></div>
+            <div className="analytics-empty"><BarChart3 size={25} /><div><h2>No resolved forecasts yet.</h2><p>Resolve a forecast to calculate Brier score, directional accuracy, and calibration.</p></div><Link href="/library" className="text-link">Open the ledger <ArrowUpRight size={15} /></Link></div>
           )}
         </>
       )}

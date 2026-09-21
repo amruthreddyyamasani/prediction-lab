@@ -129,5 +129,5 @@ export default function ObservatoryField({ compact = false }: { compact?: boolea
     return () => { if (frame) window.cancelAnimationFrame(frame); observer.disconnect(); field.removeEventListener("pointermove", onPointer); field.removeEventListener("pointerleave", resetPointer); };
   }, [compact]);
 
-  return <div ref={fieldRef} className={`observatory-field ${compact ? "is-compact" : ""}`} aria-label="Animated 3D probability field" role="img"><canvas ref={canvasRef} /><div className="observatory-corner corner-tl">FIELD / 01</div><div className="observatory-corner corner-br">x 04.21 · y 08.70</div><div className="field-readout readout-top"><span>probability field</span><strong>LIVE SIMULATION</strong></div><div className="field-readout readout-bottom"><span>uncertainty</span><strong>σ 0.24</strong></div></div>;
+  return <div ref={fieldRef} className={`observatory-field ${compact ? "is-compact" : ""}`} aria-label="Animated 3D probability field" role="img"><canvas ref={canvasRef} /><div className="observatory-corner corner-tl">FIELD / 01</div><div className="observatory-corner corner-br">x 04.21 · y 08.70</div><div className="field-readout readout-top"><span>probability field</span><strong>INTERACTIVE FIELD</strong></div><div className="field-readout readout-bottom"><span>uncertainty</span><strong>dynamic</strong></div></div>;
 }
