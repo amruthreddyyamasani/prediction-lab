@@ -43,7 +43,7 @@ export default function Home() {
     generate.mutate({ question: question.trim(), categorySlug: category || undefined });
   }
 
-  return <div className="home-page observatory-page">
+  return <div className={`home-page observatory-page ${user ? "authenticated-home" : "public-home"}`}>
     <section className="hero-grid hero-observatory">
       <div className="hero-copy depth-copy">
         <div className="eyebrow"><span className="eyebrow-line"></span> Future forecasting engine <span className="mono">01 / 06</span></div>

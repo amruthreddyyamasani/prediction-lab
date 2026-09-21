@@ -45,7 +45,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-frame">
-      <ScrollWorld />
+      {location === "/" && <ScrollWorld />}
       <div className="scroll-progress" aria-hidden="true"><span /></div>
       <aside className={`side-rail ${mobileOpen ? "is-open" : ""}`}>
         <div className="rail-brand"><div className="brand-mark"><span></span><span></span><span></span></div><div><div className="brand-name">Prediction Lab</div><div className="brand-sub">forecasting instrument</div></div><button className="mobile-close" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X size={18} /></button></div>

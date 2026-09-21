@@ -4,7 +4,7 @@ Prediction Lab is a premium, AI-powered forecasting workspace for turning future
 
 ## Live application
 
-**Canonical production website:** [prediction-lab-amruthry0912-8281.vercel.app](https://prediction-lab-amruthry0912-8281.vercel.app)
+**Canonical production website:** [prediction-lab-three.vercel.app](https://prediction-lab-three.vercel.app/)
 
 The application is deployed on Vercel from the `main` branch of this repository. The Vercel deployment is the canonical public website for this project.
 
