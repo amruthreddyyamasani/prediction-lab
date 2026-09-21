@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUpRight, Check, ChevronDown, Database, Info, LockKeyhol
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 import ObservatoryField from "@/components/ObservatoryField";
 
 const sampleQuestions = [
@@ -15,11 +16,13 @@ const stages = ["Question", "Variables", "Evidence", "Model", "Probability", "Fo
 export default function Home() {
   const [, navigate] = useLocation();
   const { user } = useSupabaseAuth();
+  const { theme, toggleTheme } = useTheme();
   const [question, setQuestion] = useState("");
   const [category, setCategory] = useState("");
   const [stage, setStage] = useState(0);
   const categories = trpc.categories.useQuery(undefined, { enabled: Boolean(user) });
   const history = trpc.predictions.list.useQuery({ status: "all" }, { enabled: Boolean(user) });
+  const analytics = trpc.analytics.useQuery(undefined, { enabled: Boolean(user) });
   const generate = trpc.predictions.generate.useMutation({ onSuccess: data => navigate(`/predictions/${data.id}`) });
 
   useEffect(() => {
@@ -32,6 +35,10 @@ export default function Home() {
   const activeCount = history.data?.filter(item => item.status === "active").length ?? 0;
   const resolvedCount = history.data?.filter(item => item.status === "resolved").length ?? 0;
   const forecastable = question.trim().length >= 10;
+  const topicRows = (categories.data ?? []).slice(0, 6).map(category => ({
+    ...category,
+    count: history.data?.filter(item => item.category_id === category.id).length ?? 0,
+  }));
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -44,7 +51,7 @@ export default function Home() {
   }
 
   return <div className={`home-page observatory-page ${user ? "authenticated-home" : "public-home"}`}>
-    <section className="hero-grid hero-observatory">
+    <section className="hero-grid hero-observatory" data-home-section="ask" id="ask">
       <div className="hero-copy depth-copy">
         <div className="eyebrow"><span className="eyebrow-line"></span> Forecasting workspace <span className="mono">01 / 06</span></div>
         <h1>Turn a question<br /><em>into a forecast.</em></h1>
@@ -55,7 +62,7 @@ export default function Home() {
       <div className="hero-field-wrap"><ObservatoryField /><div className="field-caption"><span>Interactive probability field</span><span className="mono">hover / observe / question</span></div></div>
     </section>
 
-    <section className="ask-section cinematic-section" id="ask">
+    <section className="ask-section cinematic-section" id="ask-form">
       <div className="section-kicker"><span>01</span><span className="kicker-rule"></span><span>Define the question</span><span className="section-coordinate mono">N 18° 42' · E 73° 51'</span></div>
       <div className="ask-heading"><div><h2>What are you<br /><span>forecasting?</span></h2></div><p>State a specific future event with a clear resolution date and outcome.</p></div>
       <div className="console-label-row"><span>Forecast question</span><span className="mono">STATUS: READY</span></div>
@@ -71,8 +78,39 @@ export default function Home() {
 
     {generate.isPending && <section className="processing-panel cinematic-section"><div className="processing-head"><div><div className="eyebrow"><span className="eyebrow-line"></span> Generating forecast</div><h3>Building the forecast from the question and available evidence.</h3></div><span className="mono processing-time">live / {String(stage + 1).padStart(2, "0")}</span></div><div className="stage-list cinematic-stages">{stages.map((item, index) => <div className={`stage-row ${index < stage ? "done" : ""} ${index === stage ? "current" : ""}`} key={item}><span className="stage-index">{index < stage ? <Check size={13} /> : `0${index + 1}`}</span><span>{item}</span><span className="stage-state">{index < stage ? "complete" : index === stage ? "in progress" : "queued"}</span></div>)}</div><p className="processing-note"><Sparkles size={14} /> A forecast is a probability, not a statement of certainty.</p></section>}
 
-    <section className="lab-state-section cinematic-section"><div className="section-kicker"><span>02</span><span className="kicker-rule"></span><span>Your forecast record</span><span className="section-coordinate mono">ARCHIVE / PRIVATE</span></div>{user ? <div className="record-overview archive-panel"><div className="record-title"><h2>Your forecasts</h2><p>Counts below come from your saved forecasts.</p></div><div className="record-stats"><div><strong>{activeCount.toString().padStart(2, "0")}</strong><span>active forecasts</span></div><div><strong>{resolvedCount.toString().padStart(2, "0")}</strong><span>resolved</span></div><div><strong>{history.data?.length.toString().padStart(2, "0") ?? "00"}</strong><span>total questions</span></div></div>{history.data?.length ? <Link className="text-link" href="/library">Open the forecast ledger <ArrowUpRight size={15} /></Link> : <div className="first-record"><WandSparkles size={18} /><span>No forecasts yet. Ask a question above to create one.</span></div>}</div> : <div className="guest-state archive-panel"><div className="guest-icon"><LockKeyhole size={20} /></div><div><h3>Your forecasts are private.</h3><p>You can explore without an account. Sign in when you want to save and review forecasts.</p></div><button className="text-link" onClick={() => window.dispatchEvent(new CustomEvent("prediction-lab:open-auth"))}>Create account <ArrowUpRight size={15} /></button></div>}</section>
+    <section className="lab-state-section cinematic-section" data-home-section="ledger" id="ledger"><div className="section-kicker"><span>02</span><span className="kicker-rule"></span><span>Your forecast record</span><span className="section-coordinate mono">ARCHIVE / PRIVATE</span></div>{user ? <div className="record-overview archive-panel"><div className="record-title"><h2>Your forecasts</h2><p>Counts below come from your saved forecasts.</p></div><div className="record-stats"><div><strong>{activeCount.toString().padStart(2, "0")}</strong><span>active forecasts</span></div><div><strong>{resolvedCount.toString().padStart(2, "0")}</strong><span>resolved</span></div><div><strong>{history.data?.length.toString().padStart(2, "0") ?? "00"}</strong><span>total questions</span></div></div>{history.data?.length ? <div className="home-ledger-preview"><div className="home-ledger-rows">{history.data.slice(0, 4).map((row, index) => <Link key={row.id} href={`/predictions/${row.id}`} className="home-ledger-row"><span className="mono">{String(index + 1).padStart(2, "0")}</span><strong>{row.question}</strong><span>{row.latest ? `${Math.round(row.latest.probability * 100)}%` : "—"}</span><span className={`status-mark ${row.status}`}>{row.status}</span><ArrowUpRight size={14} /></Link>)}</div><Link className="text-link" href="/library">Open the forecast ledger <ArrowUpRight size={15} /></Link></div> : <div className="first-record"><WandSparkles size={18} /><span>No forecasts yet. Ask a question above to create one.</span></div>}</div> : <div className="guest-state archive-panel"><div className="guest-icon"><LockKeyhole size={20} /></div><div><h3>Your forecasts are private.</h3><p>You can explore without an account. Sign in when you want to save and review forecasts.</p></div><button className="text-link" onClick={() => window.dispatchEvent(new CustomEvent("prediction-lab:open-auth"))}>Create account <ArrowUpRight size={15} /></button></div>}</section>
 
-    <section className="method-strip cinematic-section"><div className="method-label">Forecast lifecycle</div><div className="method-steps">{["Ask", "Understand", "Research", "Forecast", "Track", "Resolve", "Learn"].map((item, index) => <span key={item}><b>{String(index + 1).padStart(2, "0")}</b>{item}{index < 6 && <i>→</i>}</span>)}</div></section>
+    <section className="method-strip cinematic-section" data-home-section="calibration" id="calibration">
+      <div className="method-label">Calibration</div>
+      <div className="scroll-destination">
+        <div><span className="eyebrow"><span className="eyebrow-line"></span> Your forecast record</span><h2>Measure how your probabilities hold up.</h2><p>Calibration uses resolved forecasts only. Nothing is filled in when there is no real outcome.</p></div>
+        <div className="calibration-snapshot">
+          <div><span>Resolved</span><strong>{user ? analytics.data?.resolvedCount ?? 0 : "—"}</strong></div>
+          <div><span>Brier score</span><strong>{user && analytics.data?.brierScore != null ? analytics.data.brierScore.toFixed(3) : "—"}</strong></div>
+          <div><span>Accuracy</span><strong>{user && analytics.data?.accuracy != null ? `${Math.round(analytics.data.accuracy * 100)}%` : "—"}</strong></div>
+        </div>
+        <Link className="text-link" href="/analytics">Open calibration <ArrowUpRight size={15} /></Link>
+      </div>
+    </section>
+
+    <section className="scroll-section topic-scroll-section cinematic-section" data-home-section="topics" id="topics">
+      <div className="section-kicker"><span>04</span><span className="kicker-rule"></span><span>Explore topics</span><span className="section-coordinate mono">YOUR RECORD / ONLY</span></div>
+      <div className="scroll-destination topic-destination">
+        <div className="scroll-section-heading"><div><h2>Where are you forecasting?</h2><p>Browse the categories already available in the product and see where your saved questions sit.</p></div><Link className="text-link" href="/categories">Open topics <ArrowUpRight size={15} /></Link></div>
+        <div className="topic-preview">
+          {user ? topicRows.map((topic, index) => <div className="topic-preview-row" key={topic.id}><span className="mono">{String(index + 1).padStart(2, "0")}</span><strong>{topic.name}</strong><span>{topic.count} saved</span></div>) : <div className="scroll-empty">Sign in to see counts from your saved forecasts.</div>}
+        </div>
+      </div>
+    </section>
+
+    <section className="scroll-section settings-scroll-section cinematic-section" data-home-section="settings" id="settings">
+      <div className="section-kicker"><span>05</span><span className="kicker-rule"></span><span>Settings</span><span className="section-coordinate mono">ACCOUNT / DISPLAY</span></div>
+      <div className="scroll-destination settings-destination">
+        <div><span className="eyebrow"><span className="eyebrow-line"></span> Interface</span><h2>Keep the workspace in your preferred theme.</h2><p>{user ? "Your display preference is stored locally on this device." : "Sign in to manage your account settings."}</p></div>
+        <div className="theme-preview"><span className="mono">CURRENT THEME</span><strong>{theme === "dark" ? "Dark" : "Light"}</strong>{toggleTheme && <button className="secondary-button" onClick={toggleTheme}>{theme === "dark" ? "Use light theme" : "Use dark theme"}</button>}<Link className="text-link" href="/settings">Open settings <ArrowUpRight size={15} /></Link></div>
+      </div>
+    </section>
+
+    <section className="method-strip cinematic-section" aria-label="Forecast lifecycle"><div className="method-label">Forecast lifecycle</div><div className="method-steps">{["Ask", "Understand", "Research", "Forecast", "Track", "Resolve", "Learn"].map((item, index) => <span key={item}><b>{String(index + 1).padStart(2, "0")}</b>{item}{index < 6 && <i>→</i>}</span>)}</div></section>
   </div>;
 }
