@@ -29,6 +29,30 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let frame = 0;
+    let revealObserver: IntersectionObserver | null = null;
+    const reveal = () => {
+      const nodes = Array.from(document.querySelectorAll<HTMLElement>(
+        '.page-content section, .page-content .page-heading, .page-content .ledger-toolbar, .page-content .ledger-table, .page-content .metric-band, .page-content .analytics-grid, .page-content .topic-grid, .page-content .settings-list, .page-content .detail-header, .page-content .forecast-hero, .page-content .detail-section, .page-content .side-panel, .page-content .archive-panel, .page-content .method-strip'
+      ));
+      nodes.forEach((node, index) => {
+        node.dataset.reveal = index % 5 === 0 ? 'scale' : 'up';
+        node.style.transitionDelay = `${Math.min(index * 45, 260)}ms`;
+      });
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        nodes.forEach(node => node.classList.add('is-visible'));
+        return;
+      }
+      revealObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            (entry.target as HTMLElement).classList.add('is-visible');
+            revealObserver?.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+      nodes.forEach(node => revealObserver?.observe(node));
+    };
+    const revealCleanup = window.setTimeout(reveal, 0);
     const updateScene = () => {
       frame = 0;
       const max = document.documentElement.scrollHeight - window.innerHeight;
@@ -40,7 +64,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     updateScene();
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
-    return () => { window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); if (frame) window.cancelAnimationFrame(frame); };
+    return () => { window.clearTimeout(revealCleanup); revealObserver?.disconnect(); window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); if (frame) window.cancelAnimationFrame(frame); };
   }, [location]);
 
   return (

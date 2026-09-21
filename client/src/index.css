@@ -55,7 +55,27 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .mono { font-family: "IBM Plex Mono", monospace; }
 .app-frame { min-height: 100vh; display: flex; background: var(--bg); }
-.scroll-progress, .scroll-world, .world-hint { display: none; }
+.scroll-progress {
+  position: fixed; inset: 0 0 auto 0; height: 2px; z-index: 80; pointer-events: none; background: transparent;
+}
+.scroll-progress span { display: block; height: 100%; width: calc(var(--scroll-progress, 0) * 100%); background: var(--orange); transform-origin: left; }
+.scroll-world {
+  position: fixed; right: 0; top: 66px; width: min(52vw, 780px); height: calc(100vh - 66px);
+  z-index: 0; pointer-events: none; overflow: hidden; opacity: .92;
+  mask-image: linear-gradient(to left, #000 0%, #000 68%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to left, #000 0%, #000 68%, transparent 100%);
+}
+.scroll-world canvas { display: block; width: 100%; height: 100%; }
+.world-hint {
+  position: absolute; right: 28px; bottom: 24px; padding: 7px 9px;
+  border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 88%, transparent);
+  color: var(--faint); font: 8px "IBM Plex Mono", monospace; letter-spacing: .08em; text-transform: uppercase;
+}
+.satellite-tooltip { position: fixed; z-index: 90; width: 220px; padding: 13px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow-lg); color: var(--ink); }
+.satellite-tooltip .tooltip-kicker { color: var(--orange-dark); font: 8px "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: .08em; }
+.satellite-tooltip strong { display:block; margin-top: 5px; color: var(--navy); font: 25px "IBM Plex Mono", monospace; }
+.satellite-tooltip span { color: var(--muted); font-size: 11px; }
+.satellite-tooltip p { margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
 
 /* Navigation */
 .side-rail {
@@ -240,9 +260,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .field-caption { position: absolute; left: 16px; right: 16px; bottom: 13px; display: flex; justify-content: space-between; color: var(--faint); font: 8px "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: .07em; z-index: 4; }
 .observatory-field { position: relative; width: 100%; height: 100%; min-height: 100%; overflow: hidden; }
- .authenticated-home .hero-field-wrap { display: flex; align-items: stretch; }
-.authenticated-home .hero-field-wrap .observatory-field { display: none; }
-.authenticated-home .hero-field-wrap::after { content: "Forecast workspace\\A\\AQuestion → variables → evidence → probability → resolution"; white-space: pre-line; display: flex; align-items: center; justify-content: center; text-align: left; padding: 40px; width: 100%; color: var(--navy); font: 600 22px/1.6 "DM Sans", sans-serif; letter-spacing: -.02em; }
 .ask-section, .lab-state-section, .method-strip, .processing-panel { padding: 74px 56px; border-bottom: 1px solid var(--line); }
 .section-kicker { display: grid; grid-template-columns: auto 32px auto 1fr; align-items: center; gap: 10px; color: var(--faint); font: 9px "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: .1em; }
 .section-kicker > span:first-child { color: var(--orange-dark); }
@@ -535,6 +552,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .observatory-field canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 2; }
 .observatory-field .observatory-corner, .observatory-field .field-readout { pointer-events: none; }
 
+/* Motion system */
+.page-transition { position: relative; z-index: 1; animation: page-enter .42s ease both; }
+@keyframes page-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+[data-reveal] { opacity: 0; transform: translateY(26px); transition: opacity .7s cubic-bezier(.2,.75,.2,1), transform .7s cubic-bezier(.2,.75,.2,1); }
+[data-reveal].is-visible { opacity: 1; transform: translateY(0); }
+[data-reveal='scale'] { transform: translateY(18px) scale(.985); }
+[data-reveal='scale'].is-visible { transform: translateY(0) scale(1); }
+.hero-copy.depth-copy { transform: translate3d(0, var(--scroll-depth, 0px), 0); }
+.hero-field-wrap { transform: translate3d(0, calc(var(--scroll-progress, 0) * -24px), 0); transition: transform .1s linear; }
+.scroll-depth-line { position: absolute; left: 0; right: 0; height: 1px; background: var(--line); opacity: .6; }
+
 /* Responsive */
 .mobile-menu { display: none; }
 @media (max-width: 1080px) {
@@ -550,6 +578,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .analytics-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 800px) {
+  .scroll-world { top: 58px; width: 68vw; height: 52vh; opacity: .38; mask-image: linear-gradient(to left, #000, transparent 88%); -webkit-mask-image: linear-gradient(to left, #000, transparent 88%); }
   .side-rail { width: 270px; transform: translateX(-100%); transition: transform .2s ease; box-shadow: var(--shadow-lg); }
   .side-rail.is-open { transform: translateX(0); }
   .mobile-close { display: grid; place-items: center; }
@@ -565,9 +594,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .hero-copy { padding: 58px 24px 45px; min-height: auto; }
   .hero-copy h1 { font-size: clamp(46px, 12vw, 72px); }
   .hero-field-wrap { margin: 0 18px 18px; min-height: 340px; }
-   .authenticated-home .hero-field-wrap { display: flex; align-items: stretch; }
-.authenticated-home .hero-field-wrap .observatory-field { display: none; }
-.authenticated-home .hero-field-wrap::after { content: "Forecast workspace\\A\\AQuestion → variables → evidence → probability → resolution"; white-space: pre-line; display: flex; align-items: center; justify-content: center; text-align: left; padding: 40px; width: 100%; color: var(--navy); font: 600 22px/1.6 "DM Sans", sans-serif; letter-spacing: -.02em; }
 .ask-section, .lab-state-section, .method-strip, .processing-panel { padding: 50px 22px; }
   .ask-heading { grid-template-columns: 1fr; gap: 18px; margin: 32px 0; }
   .ask-heading h2 { font-size: 43px; }
@@ -608,14 +634,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .setting-value, .theme-toggle, .setting-row > .text-button { grid-column: 2; justify-self: start; }
 }
 @media (max-width: 520px) {
+  .scroll-world { width: 82vw; height: 42vh; opacity: .25; }
   .top-actions .top-signin { padding: 0 10px; }
   .internal-page, .detail-page { padding-left: 16px; padding-right: 16px; }
   .hero-copy { padding-left: 18px; padding-right: 18px; }
   .hero-copy h1 { font-size: 47px; }
   .hero-field-wrap { margin-left: 12px; margin-right: 12px; }
-   .authenticated-home .hero-field-wrap { display: flex; align-items: stretch; }
-.authenticated-home .hero-field-wrap .observatory-field { display: none; }
-.authenticated-home .hero-field-wrap::after { content: "Forecast workspace\\A\\AQuestion → variables → evidence → probability → resolution"; white-space: pre-line; display: flex; align-items: center; justify-content: center; text-align: left; padding: 40px; width: 100%; color: var(--navy); font: 600 22px/1.6 "DM Sans", sans-serif; letter-spacing: -.02em; }
 .ask-section, .lab-state-section, .method-strip, .processing-panel { padding-left: 16px; padding-right: 16px; }
   .metric-band { grid-template-columns: 1fr; }
   .metric-band > div { border-right: 0; border-bottom: 1px solid var(--line); min-height: 105px; }
@@ -626,5 +650,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .detail-actions { flex-wrap: wrap; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .scroll-world { display: none; }
+  .page-transition, [data-reveal], [data-reveal='scale'] { opacity: 1; transform: none; animation: none; transition: none; }
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
