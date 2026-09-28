@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Point3 = { x: number; y: number; z: number; phase: number; value?: string };
 
@@ -10,12 +10,30 @@ const seed = (count: number): Point3[] => Array.from({ length: count }, (_, inde
 });
 
 const particles = seed(112);
-const labels = ["0.18", "0.42", "0.70", "0.55", "0.31", "0.83"];
+const labels = ["18%", "42%", "70%", "55%", "31%", "83%"];
+const insights = [
+  { title: "Low-likelihood event", detail: "Evidence currently points against this outcome; it remains possible." },
+  { title: "Uncertain, leaning no", detail: "The available evidence is mixed, with a slight lean against the outcome." },
+  { title: "More likely than not", detail: "Current evidence favors the outcome, though meaningful uncertainty remains." },
+  { title: "Close to even", detail: "The evidence is balanced; a small amount of new information could shift this." },
+  { title: "Unlikely, not impossible", detail: "This outcome looks unlikely, but it should not be treated as impossible." },
+  { title: "High probability", detail: "The outcome appears likely, but a probability below 100% still allows surprises." },
+];
 
 export default function ObservatoryField({ compact = false }: { compact?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
   const pointer = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
+  const anchors = useRef<Array<{ x: number; y: number; index: number }>>([]);
+  const hoveredIndex = useRef<number | null>(null);
+  const selectedIndex = useRef<number | null>(null);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [insightIndex, setInsightIndex] = useState<number | null>(null);
+
+  const selectInsight = (index: number | null) => {
+    selectedIndex.current = index;
+    setInsightIndex(index);
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -55,7 +73,7 @@ export default function ObservatoryField({ compact = false }: { compact?: boolea
       const accent = isDark ? "#FF874A" : "#E07A3F";
       const muted = isDark ? "#AAA6A2" : "#626B78";
       const line = isDark ? "rgba(226,183,153,.13)" : "rgba(23,35,60,.12)";
-      const bg = isDark ? "#0B0C0E" : "#F7F7F4";
+      const bg = isDark ? "#0B0C0E" : "#F3EEE4";
       const progress = Number(getComputedStyle(document.documentElement).getPropertyValue("--scroll-progress")) || 0;
       pointer.current.x += (pointer.current.targetX - pointer.current.x) * .06;
       pointer.current.y += (pointer.current.targetY - pointer.current.y) * .06;
@@ -93,9 +111,11 @@ export default function ObservatoryField({ compact = false }: { compact?: boolea
       projected.sort((a, b) => a.depth - b.depth).forEach((point, index) => {
         const radius = Math.max(1.1, 3.2 * point.perspective);
         context.beginPath(); context.arc(point.x, point.y, radius, 0, Math.PI * 2);
-        context.fillStyle = `rgba(255,135,74,${.2 + point.perspective * .25})`;
+        context.fillStyle = accent;
+        context.globalAlpha = .2 + point.perspective * .25;
         context.fill();
-        if (index % 17 === 0 && point.depth > .1) { context.beginPath(); context.arc(point.x, point.y, radius * 2.8, 0, Math.PI * 2); context.strokeStyle = `rgba(224,122,63,${.2 * point.perspective})`; context.stroke(); }
+        context.globalAlpha = 1;
+        if (index % 17 === 0 && point.depth > .1) { context.beginPath(); context.arc(point.x, point.y, radius * 2.8, 0, Math.PI * 2); context.strokeStyle = `${accent}66`; context.stroke(); }
       });
 
       const coreX = width * .51;
@@ -119,30 +139,75 @@ export default function ObservatoryField({ compact = false }: { compact?: boolea
       const glow = context.createRadialGradient(coreX, coreY, 3, coreX, coreY, scale * .3);
       glow.addColorStop(0, `${accent}66`); glow.addColorStop(1, `${accent}00`);
       context.fillStyle = glow; context.beginPath(); context.arc(coreX, coreY, scale * .3, 0, Math.PI * 2); context.fill();
-      context.beginPath(); context.arc(coreX, coreY, compact ? 20 : 31, 0, Math.PI * 2); context.fillStyle = isDark ? "#111214" : "#F7F7F4"; context.fill(); context.strokeStyle = accent; context.lineWidth = 1.2; context.stroke();
+      context.beginPath(); context.arc(coreX, coreY, compact ? 20 : 31, 0, Math.PI * 2); context.fillStyle = isDark ? "#111214" : "#F3EEE4"; context.fill(); context.strokeStyle = accent; context.lineWidth = 1.2; context.stroke();
       context.fillStyle = accent; context.font = `${compact ? 12 : 18}px IBM Plex Mono, monospace`; context.textAlign = "center"; context.fillText("?", coreX, coreY + (compact ? 4 : 6));
 
-      const visibleLabels = compact ? labels.filter((_, index) => index % 2 === 0) : labels;
-      visibleLabels.forEach((label, index) => {
-        const anchor = projected[(index * 19 + 9) % projected.length];
+      const visibleLabels = labels.map((value, index) => ({ value, index })).filter(item => !compact || item.index % 2 === 0);
+      anchors.current = [];
+      visibleLabels.forEach(({ value: label, index }, visibleIndex) => {
+        const anchor = projected[(visibleIndex * 19 + 9) % projected.length];
         if (!anchor || anchor.depth < -.25) return;
+        anchors.current.push({ x: anchor.x + (compact ? 19 : 24), y: anchor.y + 2, index });
+        const active = (selectedIndex.current ?? hoveredIndex.current) === index;
+        if (active) {
+          context.shadowColor = accent;
+          context.shadowBlur = 13;
+          context.fillStyle = `${accent}20`;
+          context.fillRect(anchor.x + 3, anchor.y - 11, compact ? 34 : 43, compact ? 18 : 21);
+          context.shadowBlur = 0;
+        }
         context.fillStyle = accent;
-        context.strokeStyle = `${accent}99`;
+        context.strokeStyle = active ? accent : `${accent}99`;
         context.font = `${compact ? 8 : 10}px IBM Plex Mono, monospace`;
-        context.strokeRect(anchor.x + 5, anchor.y - 9, compact ? 28 : 37, compact ? 14 : 17);
+        context.strokeRect(anchor.x + 3, anchor.y - 11, compact ? 34 : 43, compact ? 18 : 21);
         context.fillText(label, anchor.x + (compact ? 19 : 24), anchor.y + 2);
       });
       context.fillStyle = muted; context.font = "9px IBM Plex Mono, monospace"; context.textAlign = "right"; context.fillText(`DEPTH ${(1 - progress).toFixed(2)}`, width - 20, height - 44);
       if (!reducedMotion.matches) frame = window.requestAnimationFrame(draw);
     };
-    const onPointer = (event: PointerEvent) => { const rect = field.getBoundingClientRect(); pointer.current.targetX = ((event.clientX - rect.left) / rect.width - .5) * 2; pointer.current.targetY = ((event.clientY - rect.top) / rect.height - .5) * 2; };
-    const resetPointer = () => { pointer.current.targetX = 0; pointer.current.targetY = 0; };
+    const onPointer = (event: PointerEvent) => {
+      const rect = field.getBoundingClientRect();
+      pointer.current.targetX = ((event.clientX - rect.left) / rect.width - .5) * 2;
+      pointer.current.targetY = ((event.clientY - rect.top) / rect.height - .5) * 2;
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const nearest = anchors.current.map(anchor => ({ ...anchor, distance: Math.hypot(anchor.x - x, anchor.y - y) })).sort((a, b) => a.distance - b.distance)[0];
+      const nextHovered = nearest && nearest.distance < 30 ? nearest.index : null;
+      if (hoveredIndex.current !== nextHovered) {
+        hoveredIndex.current = nextHovered;
+        setHoverIndex(nextHovered);
+      }
+    };
+    const onClick = (event: MouseEvent) => {
+      const rect = field.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const nearest = anchors.current.map(anchor => ({ ...anchor, distance: Math.hypot(anchor.x - x, anchor.y - y) })).sort((a, b) => a.distance - b.distance)[0];
+      if (nearest && nearest.distance < 34) selectInsight(selectedIndex.current === nearest.index ? null : nearest.index);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Enter", "Escape"].includes(event.key)) return;
+      event.preventDefault();
+      if (event.key === "Escape") { selectInsight(null); return; }
+      if (event.key === "Enter") {
+        const current = selectedIndex.current ?? hoveredIndex.current ?? 0;
+        selectInsight(selectedIndex.current === current ? null : current);
+        return;
+      }
+      const current = selectedIndex.current ?? hoveredIndex.current ?? -1;
+      const direction = event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1;
+      const next = (current + direction + labels.length) % labels.length;
+      selectInsight(next);
+    };
+    const resetPointer = () => { pointer.current.targetX = 0; pointer.current.targetY = 0; hoveredIndex.current = null; setHoverIndex(null); };
     resize(); draw(performance.now());
     const observer = new ResizeObserver(resize);
     observer.observe(field);
-    field.addEventListener("pointermove", onPointer); field.addEventListener("pointerleave", resetPointer);
-    return () => { if (frame) window.cancelAnimationFrame(frame); observer.disconnect(); field.removeEventListener("pointermove", onPointer); field.removeEventListener("pointerleave", resetPointer); };
+    field.addEventListener("pointermove", onPointer); field.addEventListener("pointerleave", resetPointer); field.addEventListener("click", onClick); field.addEventListener("keydown", onKeyDown);
+    return () => { if (frame) window.cancelAnimationFrame(frame); observer.disconnect(); field.removeEventListener("pointermove", onPointer); field.removeEventListener("pointerleave", resetPointer); field.removeEventListener("click", onClick); field.removeEventListener("keydown", onKeyDown); };
   }, [compact]);
 
-  return <div ref={fieldRef} className={`observatory-field ${compact ? "is-compact" : ""}`} aria-label="Animated 3D probability field" role="img"><canvas ref={canvasRef} /><div className="observatory-corner corner-tl">FIELD / 01</div><div className="observatory-corner corner-br">x 04.21 · y 08.70</div><div className="field-readout readout-top"><span>probability field</span><strong>INTERACTIVE FIELD</strong></div><div className="field-readout readout-bottom"><span>uncertainty</span><strong>dynamic</strong></div></div>;
+  const activeInsightIndex = insightIndex ?? hoverIndex;
+  const insight = activeInsightIndex === null ? null : insights[activeInsightIndex];
+  return <div ref={fieldRef} className={`observatory-field ${compact ? "is-compact" : ""}`} aria-label="Interactive probability field. Hover or click a labeled probability, or use arrow keys to explore." role="group" tabIndex={0}><canvas ref={canvasRef} aria-hidden="true" /><div className="observatory-corner corner-tl">FIELD / 01</div><div className="observatory-corner corner-br">x 04.21 · y 08.70</div><div className="field-readout readout-top"><span>probability field</span><strong>INTERACTIVE FIELD</strong></div><div className="field-readout readout-bottom"><span>uncertainty</span><strong>dynamic</strong></div><div className={`field-insight ${insight ? "is-active" : ""}`} aria-live="polite"><span className="field-insight-value">{insight ? labels[activeInsightIndex!] : "FIELD GUIDE"}</span><strong>{insight?.title ?? "Hover a node or use arrow keys"}</strong><span>{insight?.detail ?? "Explore illustrative probabilities; click a point to pin its explanation."}</span><small>Illustrative examples · not saved forecasts</small></div></div>;
 }
