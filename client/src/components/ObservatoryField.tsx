@@ -52,11 +52,10 @@ export default function ObservatoryField({ compact = false }: { compact?: boolea
     };
     const draw = (time: number) => {
       const isDark = document.documentElement.classList.contains("dark");
-      const accent = isDark ? "#E88950" : "#E07A3F";
-      const navy = isDark ? "#F4F5F6" : "#17233C";
-      const muted = isDark ? "#AEB7C4" : "#626B78";
-      const line = isDark ? "rgba(174,183,196,.18)" : "rgba(23,35,60,.12)";
-      const bg = isDark ? "#172033" : "#F7F7F4";
+      const accent = isDark ? "#FF874A" : "#E07A3F";
+      const muted = isDark ? "#AAA6A2" : "#626B78";
+      const line = isDark ? "rgba(226,183,153,.13)" : "rgba(23,35,60,.12)";
+      const bg = isDark ? "#0B0C0E" : "#F7F7F4";
       const progress = Number(getComputedStyle(document.documentElement).getPropertyValue("--scroll-progress")) || 0;
       pointer.current.x += (pointer.current.targetX - pointer.current.x) * .06;
       pointer.current.y += (pointer.current.targetY - pointer.current.y) * .06;
@@ -94,17 +93,33 @@ export default function ObservatoryField({ compact = false }: { compact?: boolea
       projected.sort((a, b) => a.depth - b.depth).forEach((point, index) => {
         const radius = Math.max(1.1, 3.2 * point.perspective);
         context.beginPath(); context.arc(point.x, point.y, radius, 0, Math.PI * 2);
-        context.fillStyle = `rgba(224,122,63,${.2 + point.perspective * .25})`;
+        context.fillStyle = `rgba(255,135,74,${.2 + point.perspective * .25})`;
         context.fill();
         if (index % 17 === 0 && point.depth > .1) { context.beginPath(); context.arc(point.x, point.y, radius * 2.8, 0, Math.PI * 2); context.strokeStyle = `rgba(224,122,63,${.2 * point.perspective})`; context.stroke(); }
       });
 
       const coreX = width * .51;
       const coreY = height * .5;
+      context.save();
+      context.translate(coreX, coreY + scale * .08);
+      context.rotate(-.12);
+      context.shadowColor = accent;
+      context.shadowBlur = 20;
+      context.strokeStyle = `${accent}99`;
+      context.lineWidth = 1.2;
+      context.beginPath();
+      context.ellipse(0, 0, scale * .68, scale * .2, 0, Math.PI * .06, Math.PI * .94);
+      context.stroke();
+      context.shadowBlur = 0;
+      context.strokeStyle = `${accent}55`;
+      context.beginPath();
+      context.ellipse(0, 0, scale * .68, scale * .2, 0, Math.PI * 1.06, Math.PI * 1.94);
+      context.stroke();
+      context.restore();
       const glow = context.createRadialGradient(coreX, coreY, 3, coreX, coreY, scale * .3);
       glow.addColorStop(0, `${accent}66`); glow.addColorStop(1, `${accent}00`);
       context.fillStyle = glow; context.beginPath(); context.arc(coreX, coreY, scale * .3, 0, Math.PI * 2); context.fill();
-      context.beginPath(); context.arc(coreX, coreY, compact ? 20 : 31, 0, Math.PI * 2); context.fillStyle = isDark ? "#1E293B" : "#F7F7F4"; context.fill(); context.strokeStyle = accent; context.lineWidth = 1.2; context.stroke();
+      context.beginPath(); context.arc(coreX, coreY, compact ? 20 : 31, 0, Math.PI * 2); context.fillStyle = isDark ? "#111214" : "#F7F7F4"; context.fill(); context.strokeStyle = accent; context.lineWidth = 1.2; context.stroke();
       context.fillStyle = accent; context.font = `${compact ? 12 : 18}px IBM Plex Mono, monospace`; context.textAlign = "center"; context.fillText("?", coreX, coreY + (compact ? 4 : 6));
 
       const visibleLabels = compact ? labels.filter((_, index) => index % 2 === 0) : labels;
