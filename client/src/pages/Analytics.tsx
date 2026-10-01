@@ -3,6 +3,8 @@ import { ArrowUpRight, BarChart3, Info, LineChart, Target } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
+import { useTheme } from "@/contexts/ThemeContext";
+import ForecastHistory3D from "@/components/ForecastHistory3D";
 
 function percent(value: number | null) {
   return value === null ? "—" : `${Math.round(value * 100)}%`;
@@ -13,9 +15,10 @@ function chartY(value: number) { return 90 - value * 80; }
 
 export default function Analytics() {
   const { user } = useSupabaseAuth();
+  const { theme } = useTheme();
   const [selectedRange, setSelectedRange] = useState<number | null>(null);
   const query = trpc.analytics.useQuery(undefined, { enabled: Boolean(user) });
-  const predictionsQuery = trpc.predictions.list.useQuery({ status: "resolved" }, { enabled: Boolean(user) });
+  const predictionsQuery = trpc.predictions.list.useQuery({ status: "all" }, { enabled: Boolean(user) });
   if (!user) {
     return <div className="page-empty"><div className="empty-index">03 / calibration</div><h1>Measure the<br /><em>forecast.</em></h1><p>Sign in to review calibration from your resolved forecasts.</p><Link className="primary-button" href="/">Make a forecast <ArrowUpRight size={17} /></Link></div>;
   }
@@ -42,6 +45,7 @@ export default function Analytics() {
             <div><span>Directional accuracy</span><strong>{percent(data?.accuracy ?? null)}</strong><small>50% baseline for binary events</small></div>
             <div><span>Average horizon</span><strong>{data?.horizonDays ? `${data.horizonDays}d` : "—"}</strong><small>question to resolution</small></div>
           </div>
+          <ForecastHistory3D records={predictionsQuery.data ?? []} loading={predictionsQuery.isLoading} theme={theme} />
           {data?.resolvedCount ? (
             <div className="analytics-grid">
               <section className="analysis-panel calibration-panel">
