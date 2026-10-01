@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Analytics, AppUser, ForecastGeneration, ForecastRecord } from "../shared/types.js";
+import { buildCalibrationPoints } from "../shared/calibration.js";
 import type { InsertUser, User } from "../drizzle/schema.js";
 
 /** Legacy Manus auth helpers are intentionally unused; Supabase Auth is the source of truth. */
@@ -126,17 +127,10 @@ export async function getAnalytics(client: SupabaseClient, userId: string): Prom
   const scores = resolved.map(item => item.resolution?.brier_score).filter((value): value is number => typeof value === "number");
   const averageProbability = resolved.length ? resolved.reduce((sum, item) => sum + (item.latest?.probability ?? 0), 0) / resolved.length : null;
   const accuracy = resolved.length ? resolved.filter(item => (item.resolution?.outcome === "yes") === ((item.latest?.probability ?? 0.5) >= 0.5)).length / resolved.length : null;
-  const calibration = [0.25, 0.5, 0.75, 0.9].map(center => {
-    const lower = center === 0.25 ? 0 : center - 0.125;
-    const upper = center === 0.9 ? 1.001 : center + 0.125;
-    const bucket = resolved.filter(item => (item.latest?.probability ?? 0) >= lower && (item.latest?.probability ?? 0) < upper);
-    return {
-      bucket: `${Math.round(lower * 100)}–${Math.round(Math.min(upper, 1) * 100)}%`,
-      forecast: bucket.length ? bucket.reduce((sum, item) => sum + (item.latest?.probability ?? 0), 0) / bucket.length : center,
-      observed: bucket.length ? bucket.filter(item => item.resolution?.outcome === "yes").length / bucket.length : 0,
-      count: bucket.length,
-    };
-  });
+  const calibration = buildCalibrationPoints(resolved.map(item => ({
+    probability: item.latest?.probability ?? 0,
+    outcome: item.resolution?.outcome === "yes" ? "yes" : "no",
+  })));
   const horizonDays = predictions.length ? Math.round(predictions.reduce((sum, item) => sum + Math.max(0, (new Date(item.resolution_date).getTime() - new Date(item.created_at).getTime()) / 86400000), 0) / predictions.length) : null;
   return {
     resolvedCount: resolved.length,

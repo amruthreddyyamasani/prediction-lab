@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowUpRight, Check, ChevronDown, Database, Info, LockKeyhole, Radar, Sparkles, Target, WandSparkles } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, Database, Info, LockKeyhole, Radar, Sparkles, Target, WandSparkles } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { useTheme } from "@/contexts/ThemeContext";
 import ObservatoryField from "@/components/ObservatoryField";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 const sampleQuestions = [
   "Will AI agents complete more than 20% of software-development tasks by 2028?",
@@ -21,6 +22,8 @@ export default function Home() {
   const [category, setCategory] = useState("");
   const [stage, setStage] = useState(0);
   const [activeSample, setActiveSample] = useState<number | null>(null);
+  const [guidedTourOpen, setGuidedTourOpen] = useState(false);
+  const [guidedTourStep, setGuidedTourStep] = useState(0);
   const questionInputRef = useRef<HTMLTextAreaElement>(null);
   const categories = trpc.categories.useQuery(undefined, { enabled: Boolean(user) });
   const history = trpc.predictions.list.useQuery({ status: "all" }, { enabled: Boolean(user) });
@@ -65,6 +68,19 @@ export default function Home() {
     window.setTimeout(() => setActiveSample(current => current === index ? null : current), 900);
   }
 
+  function openGuidedTour() {
+    setGuidedTourStep(0);
+    setGuidedTourOpen(true);
+  }
+
+  function finishTourAndFocusQuestion() {
+    setGuidedTourOpen(false);
+    window.setTimeout(() => {
+      document.getElementById("ask-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      questionInputRef.current?.focus({ preventScroll: true });
+    }, 180);
+  }
+
   return <div className={`home-page observatory-page ${user ? "authenticated-home" : "public-home"}`}>
     <section className="hero-grid hero-observatory" data-home-section="ask" id="ask" onPointerMove={followPointer}>
       <div className="hero-copy depth-copy">
@@ -72,6 +88,7 @@ export default function Home() {
         <h1>Turn a question<br /><em>into a forecast.</em></h1>
         <p className="hero-lede">Frame a future event, set a probability, and keep the reasoning with the question until it resolves.</p>
         <div className="trust-line"><span><Radar size={14} /> evidence-linked</span><span><Target size={14} /> resolution criteria</span><span><Database size={14} /> private ledger</span></div>
+        {!user && <button type="button" className="guided-tour-launch" onClick={openGuidedTour}><Sparkles size={15} /><span>Explore a guided sample</span><ArrowUpRight size={14} /></button>}
         <a className="scroll-cue" href="#ask"><span className="scroll-cue-line" /><span>See how it works</span><ArrowDown size={14} /></a>
       </div>
       <div className="hero-field-wrap"><ObservatoryField /><div className="field-caption"><span>Interactive probability field</span><span className="mono">hover / observe / question</span></div></div>
@@ -127,5 +144,36 @@ export default function Home() {
     </section>
 
     <section className="method-strip cinematic-section" aria-label="Forecast lifecycle"><div className="method-label">Forecast lifecycle</div><div className="method-steps">{["Ask", "Understand", "Research", "Forecast", "Track", "Resolve", "Learn"].map((item, index) => <span key={item}><b>{String(index + 1).padStart(2, "0")}</b>{item}{index < 6 && <i>→</i>}</span>)}</div></section>
+
+    <Dialog open={guidedTourOpen} onOpenChange={setGuidedTourOpen}>
+      <DialogContent className="guided-tour-dialog">
+        <div className="guided-tour-topline"><span className="mono">SAMPLE FORECAST / WALKTHROUGH</span><span className="tour-demo-badge">DEMO · NOT SAVED</span></div>
+        <div className="guided-tour-progress" aria-label={`Step ${guidedTourStep + 1} of 3`}>{[0, 1, 2].map(step => <span key={step} className={step <= guidedTourStep ? "complete" : ""} />)}</div>
+        <div className="guided-tour-content" key={guidedTourStep}>
+          <span className="guided-tour-step mono">STEP 0{guidedTourStep + 1} / 03</span>
+          {guidedTourStep === 0 ? <>
+            <DialogTitle>Start with a clear finish line.</DialogTitle>
+            <DialogDescription>A useful forecast has a specific outcome and a date when you can check what happened.</DialogDescription>
+            <div className="tour-question-card"><span className="mono">FICTIONAL EXAMPLE · RESOLVES JUN 30, 2027</span><strong>Will the fictional city of Northstar open three public charging hubs by June 30, 2027?</strong><div><span>Clear yes/no outcome</span><span>Fixed resolution date</span></div></div>
+            <p className="tour-footnote"><Info size={14} /> Northstar is fictional. This question is used only to demonstrate the workflow.</p>
+          </> : guidedTourStep === 1 ? <>
+            <DialogTitle>A probability is not a promise.</DialogTitle>
+            <DialogDescription>The demo estimate below is illustrative only—not an AI-generated or real-world forecast.</DialogDescription>
+            <div className="tour-estimate-card"><div className="tour-probability-ring"><span>64<small>%</small></span></div><div><span className="mono">ILLUSTRATIVE PROBABILITY</span><strong>More likely than not</strong><p>In this fictional scenario, two hubs are funded and a third contract is still pending.</p></div></div>
+            <div className="tour-uncertainty"><span>Estimate</span><span className="tour-uncertainty-line"><i /></span><span>Uncertainty remains</span></div>
+          </> : <>
+            <DialogTitle>Keep the reasoning as events change.</DialogTitle>
+            <DialogDescription>A real forecast keeps its evidence, updates, and eventual outcome together. This tour stays local and does not create a record.</DialogDescription>
+            <div className="tour-timeline"><div><span className="tour-timeline-dot current" /><span className="mono">TODAY</span><strong>Start at 64%</strong><small>Three hubs are the resolution target.</small></div><div><span className="tour-timeline-dot" /><span className="mono">NEW EVIDENCE</span><strong>Update the estimate</strong><small>A signed contract could change the probability.</small></div><div><span className="tour-timeline-dot" /><span className="mono">RESOLUTION</span><strong>Compare with the outcome</strong><small>Calibration uses real resolved forecasts only.</small></div></div>
+            <p className="tour-footnote"><LockKeyhole size={14} /> No account, AI request, or saved forecast is created by this walkthrough.</p>
+          </>}
+        </div>
+        <div className="guided-tour-actions">
+          <button type="button" className="tour-back" onClick={() => setGuidedTourStep(step => Math.max(0, step - 1))} disabled={guidedTourStep === 0}><ArrowLeft size={15} /> Back</button>
+          <span className="mono">{String(guidedTourStep + 1).padStart(2, "0")} / 03</span>
+          {guidedTourStep < 2 ? <button type="button" className="primary-button" onClick={() => setGuidedTourStep(step => Math.min(2, step + 1))}>Continue <ArrowRight size={16} /></button> : <button type="button" className="primary-button" onClick={finishTourAndFocusQuestion}>Try my own question <ArrowUpRight size={16} /></button>}
+        </div>
+      </DialogContent>
+    </Dialog>
   </div>;
 }

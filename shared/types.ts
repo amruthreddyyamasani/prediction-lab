@@ -1,3 +1,5 @@
+import type { CalibrationPoint } from "./calibration.js";
+
 export type ForecastLabel = "likely" | "uncertain" | "unlikely";
 export type Uncertainty = "low" | "medium" | "high";
 export type PredictionStatus = "active" | "resolved" | "expired" | "cancelled";
@@ -79,7 +81,7 @@ export type Analytics = {
   averageProbability: number | null;
   brierScore: number | null;
   accuracy: number | null;
-  calibration: Array<{ bucket: string; forecast: number; observed: number; count: number }>;
+  calibration: CalibrationPoint[];
   horizonDays: number | null;
 };
 
