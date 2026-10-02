@@ -88,6 +88,8 @@ export type Analytics = {
 export type ForecastInput = {
   question: string;
   categorySlug?: string;
+  resolutionCriteria?: string;
+  resolutionDate?: string;
 };
 
 export type ForecastGeneration = {

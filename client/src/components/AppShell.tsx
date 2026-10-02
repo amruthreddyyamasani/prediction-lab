@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Activity, BarChart3, BookOpen, ChevronRight, Compass, FlaskConical, LogIn, LogOut, Menu, Moon, Settings2, Sun, X } from "lucide-react";
+import { Activity, BarChart3, BookOpen, ChevronRight, Compass, FlaskConical, LogIn, LogOut, Menu, Moon, Search, Settings2, Sun, X } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useAccessibility } from "@/contexts/AccessibilityContext";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
+import { trpc } from "@/lib/trpc";
+import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import AuthDialog from "./AuthDialog";
 import ScrollWorld from "./ScrollWorld";
 
@@ -14,12 +17,15 @@ const nav = [
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
   const [homeSection, setHomeSection] = useState("ask");
   const { theme, toggleTheme } = useTheme();
+  const { reducedMotion: userReducedMotion } = useAccessibility();
   const { user, loading, signOut } = useSupabaseAuth();
+  const forecastSearch = trpc.predictions.list.useQuery({ status: "all" }, { enabled: Boolean(user && commandOpen) });
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "PL";
 
   useEffect(() => {
@@ -29,9 +35,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const onShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen(open => !open);
+      }
+    };
+    window.addEventListener("keydown", onShortcut);
+    return () => window.removeEventListener("keydown", onShortcut);
+  }, []);
+
+  const runCommand = (path: string) => {
+    setCommandOpen(false);
+    navigate(path);
+  };
+
+  useEffect(() => {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
-    if (reducedMotion.matches || !finePointer.matches) return;
+    if (reducedMotion.matches || userReducedMotion || !finePointer.matches) return;
 
     const selector = ".magnetic-button, .primary-button, .secondary-button, .guided-tour-launch, .top-signin";
     let active: HTMLElement | null = null;
@@ -41,7 +63,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       active = null;
     };
     const onPointerMove = (event: PointerEvent) => {
-      if (event.pointerType !== "mouse" || reducedMotion.matches || !finePointer.matches) {
+      if (event.pointerType !== "mouse" || reducedMotion.matches || userReducedMotion || !finePointer.matches) {
         reset();
         return;
       }
@@ -63,7 +85,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       if (active && !active.contains(event.relatedTarget as Node | null)) reset();
     };
     const onMotionPreferenceChange = () => {
-      if (reducedMotion.matches || !finePointer.matches) reset();
+      if (reducedMotion.matches || userReducedMotion || !finePointer.matches) reset();
     };
 
     document.addEventListener("pointermove", onPointerMove, { passive: true });
@@ -77,7 +99,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       finePointer.removeEventListener("change", onMotionPreferenceChange);
       reset();
     };
-  }, []);
+  }, [userReducedMotion]);
 
   useEffect(() => {
     if (location !== "/") {
@@ -107,6 +129,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         node.dataset.reveal = index % 5 === 0 ? 'scale' : 'up';
         node.style.transitionDelay = `${Math.min(index * 45, 260)}ms`;
         node.querySelectorAll<HTMLElement>("h1, h2, h3").forEach(heading => {
+          if (heading.matches(".hero-copy h1")) return;
           heading.dataset.motionTitle = "true";
         });
       });
@@ -165,8 +188,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="rail-note"><Activity size={16} /><div><strong>Forecasts are not facts.</strong><span>Probabilities update as the world changes.</span></div></div>
         <div className="rail-bottom">{location === "/" ? <a href="#settings" className={`rail-link ${homeSection === "settings" ? "active" : ""}`} onClick={() => setMobileOpen(false)} aria-current={homeSection === "settings" ? "location" : undefined}><Settings2 size={17} strokeWidth={1.7} /><span>Settings</span></a> : <Link href="/settings" className={`rail-link ${location === "/settings" ? "active" : ""}`}><Settings2 size={17} strokeWidth={1.7} /><span>Settings</span></Link>}{loading ? <div className="rail-user muted">Checking session…</div> : user ? <button className="rail-user" onClick={() => signOut()}><span className="avatar">{initials}</span><span className="user-copy"><strong>{user.email}</strong><small>Sign out</small></span><LogOut size={15} /></button> : <button className="rail-user" onClick={() => setAuthOpen(true)}><span className="avatar guest">?</span><span className="user-copy"><strong>Guest mode</strong><small>Sign in to save</small></span><LogIn size={15} /></button>}</div>
       </aside>
-      <main className="main-canvas"><header className="top-bar"><button className="mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={20} /></button><div className="breadcrumb"><span>Prediction Lab</span><span className="slash">/</span><span>{nav.find(item => location === item.href || (item.href !== "/" && location.startsWith(item.href)))?.label ?? "Forecast"}</span></div><div className="top-actions"><span className="live-dot"></span><span className="live-label">Evidence-aware</span><button className="icon-button" onClick={toggleTheme} aria-label="Toggle theme">{theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}</button>{!user && <button className="top-signin" onClick={() => setAuthOpen(true)}>Sign in <LogIn size={15} /></button>}</div></header><div className="page-content page-transition" key={location}>{children}</div></main>
+      <main className="main-canvas"><header className="top-bar"><button className="mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={20} /></button><div className="breadcrumb"><span>Prediction Lab</span><span className="slash">/</span><span>{nav.find(item => location === item.href || (item.href !== "/" && location.startsWith(item.href)))?.label ?? "Forecast"}</span></div><div className="top-actions"><button type="button" className="top-command-trigger" onClick={() => setCommandOpen(true)} aria-label="Search forecasts and pages"><Search size={14} /><span>Search</span><kbd>⌘ / Ctrl K</kbd></button><span className="live-dot"></span><span className="live-label">Evidence-aware</span><button className="icon-button" onClick={toggleTheme} aria-label="Toggle theme">{theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}</button>{!user && <button className="top-signin" onClick={() => setAuthOpen(true)}>Sign in <LogIn size={15} /></button>}</div></header><div className="page-content page-transition" key={location}>{children}</div></main>
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+      <CommandDialog open={commandOpen} onOpenChange={setCommandOpen} title="Search Prediction Lab" description="Navigate to a workspace or open one of your saved forecasts.">
+        <CommandInput placeholder="Search pages or saved forecasts…" aria-label="Search pages or saved forecasts" />
+        <CommandList>
+          <CommandEmpty>No matching pages or saved forecasts.</CommandEmpty>
+          <CommandGroup heading="Navigate">
+            <CommandItem onSelect={() => runCommand("/")}>Ask the future</CommandItem>
+            <CommandItem onSelect={() => runCommand("/library")}>Forecast ledger</CommandItem>
+            <CommandItem onSelect={() => runCommand("/analytics")}>Calibration desk</CommandItem>
+            <CommandItem onSelect={() => runCommand("/categories")}>Explore topics</CommandItem>
+            <CommandItem onSelect={() => runCommand("/settings")}>Settings</CommandItem>
+          </CommandGroup>
+          {user && <CommandGroup heading="Your saved forecasts">{forecastSearch.data?.map(item => <CommandItem key={item.id} value={`${item.question} ${item.category?.name ?? ""}`} onSelect={() => runCommand(`/predictions/${item.id}`)}>{item.question}</CommandItem>)}</CommandGroup>}
+          {!user && <CommandGroup heading="Private records"><CommandItem disabled>Sign in to search your saved forecasts.</CommandItem></CommandGroup>}
+        </CommandList>
+      </CommandDialog>
     </div>
   );
 }

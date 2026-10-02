@@ -50,7 +50,7 @@ export async function getPrediction(client: SupabaseClient, userId: string, id: 
   return normalizePrediction(data);
 }
 
-export async function createPrediction(client: SupabaseClient, user: AppUser, generation: ForecastGeneration) {
+export async function createPrediction(client: SupabaseClient, user: AppUser, generation: ForecastGeneration, overrides: { resolutionCriteria?: string; resolutionDate?: string } = {}) {
   const categories = await getCategories(client);
   const category = categories.find(item => item.slug === generation.categorySlug) ?? null;
   const { data: prediction, error: predictionError } = await client.from("predictions").insert({
@@ -58,8 +58,8 @@ export async function createPrediction(client: SupabaseClient, user: AppUser, ge
     question: generation.normalizedQuestion,
     normalized_question: generation.normalizedQuestion,
     category_id: category?.id ?? null,
-    resolution_date: generation.resolutionDate,
-    resolution_criteria: generation.resolutionCriteria,
+    resolution_date: overrides.resolutionDate ?? generation.resolutionDate,
+    resolution_criteria: overrides.resolutionCriteria ?? generation.resolutionCriteria,
   }).select("id").single();
   if (predictionError || !prediction) fail(predictionError, "Prediction could not be saved.");
 
@@ -79,6 +79,22 @@ export async function createPrediction(client: SupabaseClient, user: AppUser, ge
   });
   if (versionError) fail(versionError, "Forecast was generated but could not be saved.");
   return getPrediction(client, user.id, prediction.id);
+}
+
+export async function addEvidence(client: SupabaseClient, userId: string, predictionId: string, input: { sourceUrl: string; sourceName: string; title: string; excerpt: string; stance: "supporting" | "contradicting" | "context"; publishedAt?: string }) {
+  await getPrediction(client, userId, predictionId);
+  const { error } = await client.from("evidence").insert({
+    prediction_id: predictionId,
+    source_url: input.sourceUrl,
+    source_name: input.sourceName,
+    title: input.title,
+    excerpt: input.excerpt,
+    stance: input.stance,
+    published_at: input.publishedAt ? `${input.publishedAt}T12:00:00.000Z` : null,
+    source_type: "external",
+  });
+  if (error) fail(error, "Evidence could not be saved.");
+  return getPrediction(client, userId, predictionId);
 }
 
 export async function updateForecast(client: SupabaseClient, userId: string, predictionId: string, generation: ForecastGeneration, changeSummary: string) {

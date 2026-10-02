@@ -287,6 +287,7 @@ export default function ThreeDataPlot({ spec, compact = false }: Props) {
     </div>
     {spec.notice && <p className="three-plot-notice">{spec.notice}</p>}
     {empty ? <div className="three-plot-empty" role="status">{spec.emptyMessage}</div> : <>
+      <details className="three-plot-guide"><summary>How to explore this graph</summary><div><ul><li>Drag with a mouse or one finger to orbit the view.</li><li>Scroll or pinch to zoom. The reset button restores the starting camera.</li><li>Choose 2D for a simpler view, or use the keyboard-accessible data list below.</li></ul><p>The 3D canvas is a visual aid; the list provides the same records without requiring spatial interaction.</p></div></details>
       <div className="three-plot-stage">
         {view === "3d" && !unavailable ? <div ref={hostRef} className="three-plot-canvas-host" aria-hidden="true" /> : <TwoDimensionalFallback spec={spec} />}
         {visibleHover && <div className="three-plot-tooltip" style={{ left: visibleHover.left, top: visibleHover.top }} role="status"><span>{visibleHover.node.label}</span><p>{visibleHover.node.detail}</p></div>}
