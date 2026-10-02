@@ -29,6 +29,57 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
+    if (reducedMotion.matches || !finePointer.matches) return;
+
+    const selector = ".magnetic-button, .primary-button, .secondary-button, .guided-tour-launch, .top-signin";
+    let active: HTMLElement | null = null;
+    const reset = () => {
+      active?.style.setProperty("--magnet-x", "0px");
+      active?.style.setProperty("--magnet-y", "0px");
+      active = null;
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse" || reducedMotion.matches || !finePointer.matches) {
+        reset();
+        return;
+      }
+      const origin = event.target instanceof Element ? event.target : null;
+      const target = origin?.closest<HTMLElement>(selector) ?? null;
+      if (!target || target.matches(":disabled, [aria-disabled='true']")) {
+        reset();
+        return;
+      }
+      if (active !== target) reset();
+      active = target;
+      const bounds = target.getBoundingClientRect();
+      const x = Math.max(-5, Math.min(5, (event.clientX - bounds.left - bounds.width / 2) * 0.08));
+      const y = Math.max(-4, Math.min(4, (event.clientY - bounds.top - bounds.height / 2) * 0.08));
+      target.style.setProperty("--magnet-x", `${x.toFixed(2)}px`);
+      target.style.setProperty("--magnet-y", `${y.toFixed(2)}px`);
+    };
+    const onPointerOut = (event: PointerEvent) => {
+      if (active && !active.contains(event.relatedTarget as Node | null)) reset();
+    };
+    const onMotionPreferenceChange = () => {
+      if (reducedMotion.matches || !finePointer.matches) reset();
+    };
+
+    document.addEventListener("pointermove", onPointerMove, { passive: true });
+    document.addEventListener("pointerout", onPointerOut);
+    reducedMotion.addEventListener("change", onMotionPreferenceChange);
+    finePointer.addEventListener("change", onMotionPreferenceChange);
+    return () => {
+      document.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerout", onPointerOut);
+      reducedMotion.removeEventListener("change", onMotionPreferenceChange);
+      finePointer.removeEventListener("change", onMotionPreferenceChange);
+      reset();
+    };
+  }, []);
+
+  useEffect(() => {
     if (location !== "/") {
       setHomeSection("ask");
       return;
@@ -50,11 +101,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     let revealObserver: IntersectionObserver | null = null;
     const reveal = () => {
       const nodes = Array.from(document.querySelectorAll<HTMLElement>(
-        '.page-content section, .page-content .page-heading, .page-content .ledger-toolbar, .page-content .ledger-table, .page-content .metric-band, .page-content .analytics-grid, .page-content .topic-grid, .page-content .settings-list, .page-content .detail-header, .page-content .forecast-hero, .page-content .detail-section, .page-content .side-panel, .page-content .archive-panel, .page-content .method-strip'
+        '.page-content section, .page-content .page-heading, .page-content .ledger-toolbar, .page-content .ledger-table, .page-content .metric-band, .page-content .analytics-grid, .page-content .topic-grid, .page-content .settings-list, .page-content .detail-header, .page-content .forecast-hero, .page-content .detail-section, .page-content .side-panel, .page-content .archive-panel, .page-content .method-strip, .page-content .forecast-story-card'
       ));
       nodes.forEach((node, index) => {
         node.dataset.reveal = index % 5 === 0 ? 'scale' : 'up';
         node.style.transitionDelay = `${Math.min(index * 45, 260)}ms`;
+        node.querySelectorAll<HTMLElement>("h1, h2, h3").forEach(heading => {
+          heading.dataset.motionTitle = "true";
+        });
       });
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         nodes.forEach(node => node.classList.add('is-visible'));

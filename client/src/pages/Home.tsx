@@ -13,6 +13,15 @@ const sampleQuestions = [
   "Will humans return to the Moon before December 31, 2030?",
 ];
 const stages = ["Question", "Variables", "Evidence", "Model", "Probability", "Forecast"];
+const storySteps = [
+  { label: "Ask", detail: "Frame a future event as a clear, measurable question." },
+  { label: "Understand", detail: "Set an outcome and a resolution date you can check." },
+  { label: "Research", detail: "Review the context, evidence, catalysts, and risks." },
+  { label: "Forecast", detail: "Express uncertainty as a probability, not certainty." },
+  { label: "Track", detail: "Revisit your view as the forecast evolves." },
+  { label: "Resolve", detail: "Record what happened against your resolution criteria." },
+  { label: "Learn", detail: "Review resolved results to assess calibration." },
+];
 
 export default function Home() {
   const [, navigate] = useLocation();
@@ -143,7 +152,15 @@ export default function Home() {
       </div>
     </section>
 
-    <section className="method-strip cinematic-section" aria-label="Forecast lifecycle"><div className="method-label">Forecast lifecycle</div><div className="method-steps">{["Ask", "Understand", "Research", "Forecast", "Track", "Resolve", "Learn"].map((item, index) => <span key={item}><b>{String(index + 1).padStart(2, "0")}</b>{item}{index < 6 && <i>→</i>}</span>)}</div></section>
+    <section className="method-strip story-strip cinematic-section" aria-label="Forecast lifecycle">
+      <div className="method-label"><span>Forecast lifecycle</span><small className="story-scroll-cue mono">Scroll / swipe →</small></div>
+      <div className="forecast-story-rail" role="list" aria-label="Seven steps in the forecasting workflow" tabIndex={0}>
+        {storySteps.map((item, index) => <article className="forecast-story-card" key={item.label} role="listitem">
+          <div className="story-step-meta"><span className="story-step-number">{String(index + 1).padStart(2, "0")}</span><span className="story-step-path" /><ArrowRight size={13} aria-hidden="true" /></div>
+          <h3>{item.label}</h3><p>{item.detail}</p>
+        </article>)}
+      </div>
+    </section>
 
     <Dialog open={guidedTourOpen} onOpenChange={setGuidedTourOpen}>
       <DialogContent className="guided-tour-dialog">
