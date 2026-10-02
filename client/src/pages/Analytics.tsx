@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { useTheme } from "@/contexts/ThemeContext";
 import ForecastHistory3D from "@/components/ForecastHistory3D";
+import CalibrationTerrain3D from "@/components/CalibrationTerrain3D";
 
 function percent(value: number | null) {
   return value === null ? "—" : `${Math.round(value * 100)}%`;
@@ -17,6 +18,7 @@ export default function Analytics() {
   const { user } = useSupabaseAuth();
   const { theme } = useTheme();
   const [selectedRange, setSelectedRange] = useState<number | null>(null);
+  const [visualization, setVisualization] = useState<"history" | "calibration">("history");
   const query = trpc.analytics.useQuery(undefined, { enabled: Boolean(user) });
   const predictionsQuery = trpc.predictions.list.useQuery({ status: "all" }, { enabled: Boolean(user) });
   if (!user) {
@@ -45,7 +47,13 @@ export default function Analytics() {
             <div><span>Directional accuracy</span><strong>{percent(data?.accuracy ?? null)}</strong><small>50% baseline for binary events</small></div>
             <div><span>Average horizon</span><strong>{data?.horizonDays ? `${data.horizonDays}d` : "—"}</strong><small>question to resolution</small></div>
           </div>
-          <ForecastHistory3D records={predictionsQuery.data ?? []} loading={predictionsQuery.isLoading} theme={theme} />
+          <div className="analytics-visualization-tabs" role="group" aria-label="3D analytics view">
+            <button type="button" aria-pressed={visualization === "history"} className={visualization === "history" ? "active" : ""} onClick={() => setVisualization("history")}>Probability history</button>
+            <button type="button" aria-pressed={visualization === "calibration"} className={visualization === "calibration" ? "active" : ""} onClick={() => setVisualization("calibration")}>Calibration terrain</button>
+          </div>
+          {visualization === "history"
+            ? <ForecastHistory3D records={predictionsQuery.data ?? []} loading={predictionsQuery.isLoading} theme={theme} />
+            : <CalibrationTerrain3D points={data?.calibration ?? []} />}
           {data?.resolvedCount ? (
             <div className="analytics-grid">
               <section className="analysis-panel calibration-panel">
